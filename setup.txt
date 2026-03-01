@@ -1,62 +1,15 @@
-# 0) System deps
-sudo apt update
-sudo apt install -y build-essential cmake
+conda create -n aebm python=3.12
+conda activate aebm
 
-# 1) Create & activate your Conda env
-conda remove --name mamba-attn --all 2>/dev/null || true
-conda create -y -n mamba-attn python=3.12
-conda activate mamba-attn
+python -m pip install --upgrade pip
 
-## 2) CUDA toolkit & compilers
-conda install -y -c nvidia cuda-toolkit=12.8
-export CUDA_HOME=$CONDA_PREFIX
-export PATH=$CUDA_HOME/bin:$PATH
-export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
-
-## 3) Install a compatible GCC/G++ & ninja
-conda install -y -c conda-forge gcc_linux-64=11 gxx_linux-64=11 ninja
-export CC=$CONDA_PREFIX/bin/x86_64-conda-linux-gnu-gcc
-export CXX=$CONDA_PREFIX/bin/x86_64-conda-linux-gnu-g++
-
-## 4) NVCC flags & architecture
-export TORCH_NVCC_FLAGS="--allow-unsupported-compiler"
-export TORCH_CUDA_ARCH_LIST="12.0"
-
-# 5) PyTorch + any extra pip deps
-pip install --upgrade pip
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-
-# If you have other pip requirements for your project:
-pip install --requirement extra_requirements.txt
-# plus any project-specific ones not in that file:
-pip install diffusers accelerate einops  # etc.
-
-# 6) Build & install causal-conv1d from source
-git clone https://github.com/Dao-AILab/causal-conv1d.git
-cd causal-conv1d
-
-# ─── edit setup.py ────
-# under the `else:` CUDA branch, right after sm_100 support, add:
-#     cc_flag.append("-gencode")
-#     cc_flag.append("arch=compute_120,code=compute_120")
-# ──────────────────────
-
-pip uninstall -y causal-conv1d
-export CAUSAL_CONV1D_FORCE_BUILD=TRUE
-pip install --no-build-isolation --no-deps --force-reinstall -e .
-cd ..
-
-## 7) Build & install your mamba_ssm / top-level package
-pip uninstall -y mamba_ssm
-pip install --no-build-isolation --no-deps --force-reinstall -e .
-
-# 8) (Optional) Verify PTX embed
-python - <<'PY'
-import re, subprocess, pathlib, causal_conv1d_cuda
-so = pathlib.Path(causal_conv1d_cuda.__file__)
-dump = subprocess.check_output(["cuobjdump","--dump-elf",str(so)], text=True)
-print("compute_120 PTX present:", bool(re.search(r"arch\s*=\s*compute_120", dump)))
-PY
-
-# 9) Launch training
-accelerate launch --mixed_precision fp16 ./train.py --config=configs/cifar10_S_DiM.py
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+pip install tensorboard
+pip install tqdm
+pip install scipy
+pip install einops
+pip install timm
+pip install torch-fidelity
+pip install opencv-python
+pip install pytorch-lightning
+pip install omegaconf
