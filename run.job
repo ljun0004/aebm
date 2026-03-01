@@ -1,0 +1,79 @@
+#!/bin/bash
+#SBATCH --job-name=bmar
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=64G
+#SBATCH --time=1-00:00:00
+#SBATCH --output=bmar-%j.out
+
+# H100 GPU partition
+#SBATCH --partition=gpu
+#SBATCH --gres=gpu:A100:1
+
+# Email notifications
+#SBATCH --mail-user=loo.junnyong@monash.edu
+#SBATCH --mail-type=BEGIN,END,FAIL
+
+set -e
+
+## -----------------------------
+## Environment / Conda setup
+## -----------------------------
+module load miniforge3
+eval "$(conda shell hook)"
+conda activate bmar
+
+## -----------------------------
+## Job Info
+## -----------------------------
+echo "Job started: $(date)"
+echo "Node: $(hostname)"
+echo "Allocated nodes:"
+scontrol show hostnames ${SLURM_JOB_NODELIST}
+echo "GPUs allocated:"
+nvidia-smi -L
+
+## -----------------------------
+## Diagnostics
+## -----------------------------
+export TORCHELASTIC_ERROR_FILE=/home/ljun0004/sa31/Junn/bmar/torchelastic_error_${SLURM_JOB_ID}.json
+export TORCH_SHOW_CPP_STACKTRACES=1
+export CUDA_LAUNCH_BLOCKING=1
+echo "TORCHELASTIC_ERROR_FILE set to $TORCHELASTIC_ERROR_FILE"
+echo "TORCH_SHOW_CPP_STACKTRACES=$TORCH_SHOW_CPP_STACKTRACES"
+echo "CUDA_LAUNCH_BLOCKING=$CUDA_LAUNCH_BLOCKING"
+
+## -----------------------------
+## Distributed Training Setup
+## -----------------------------
+export MASTER_ADDR=$(scontrol show hostnames ${SLURM_JOB_NODELIST} | head -n 1)
+export MASTER_PORT=29500
+export NODE_RANK=${SLURM_NODEID}
+
+echo "MASTER_ADDR=${MASTER_ADDR}"
+echo "MASTER_PORT=${MASTER_PORT}"
+echo "NODE_RANK=${NODE_RANK}"
+echo "SLURM_NTASKS_PER_NODE=${SLURM_NTASKS_PER_NODE}"
+echo "SLURM_NNODES=${SLURM_NNODES}"
+
+## -----------------------------
+## Execution
+## -----------------------------
+# Move to the project directory
+cd /home/ljun0004/sa31/Junn/bmar
+
+# # --- MEMORY OPTIMIZATION SETTING (Crucial for your OOM issue) ---
+# # This allows PyTorch's CUDA allocator to use fragmented memory segments, 
+# # helping to resolve the 47 MiB deficit you were facing.
+# export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+# echo "PYTORCH_CUDA_ALLOC_CONF set to expandable_segments:True"
+
+# Execute the main training script
+echo "Running train_gpus.sh..."
+bash train_slurm.sh
+
+## -----------------------------
+## Completion
+## -----------------------------
+echo " Job finished at: $(date)"

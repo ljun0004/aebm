@@ -1,0 +1,269 @@
+import torch
+import torch.nn as nn
+from torch.utils.checkpoint import checkpoint
+import math
+
+from diffusion import create_diffusion
+
+import einops
+from timm.models.vision_transformer import PatchEmbed, Attention, Mlp
+from torch.nn import functional as F
+# import pytorch_lightning as L
+from itertools import chain
+
+class DDPMLoss(nn.Module):
+    """Diffusion Loss"""
+    def __init__(self, target_channels, z_channels, num_sampling_steps, grad_checkpointing=False):
+        super().__init__()
+        self.in_channels = target_channels
+        self.score_model = ScoreModel(target_channels)
+        self.train_diffusion = create_diffusion(timestep_respacing="", noise_schedule="linear", learn_sigma=False)
+        self.gen_diffusion = create_diffusion(timestep_respacing=num_sampling_steps, noise_schedule="linear", learn_sigma=False)
+
+    def forward(self, mar, x, mask, class_embedding, cookbook, gt_indices, warmup):
+
+        # print(f"DDPMLoss.forward - x_start: {x_start.shape}, z: {z.shape}, mask: {mask.shape}, cookbook: {cookbook.shape}, gt_indices: {gt_indices.shape}")
+
+        # timestep sampling and embed
+        x_start = x.clone().detach()
+        bsz = x_start.shape[0]
+
+        # x_start = x_start.reshape(bsz * seq_len, -1)
+
+        t = torch.randint(0, self.train_diffusion.num_timesteps, (bsz,), device=x_start.device)
+        # t = t.unsqueeze(dim=1).expand(-1, seq_len).flatten(start_dim=0, end_dim=1)
+        # t = t.repeat_interleave(seq_len)
+
+        model_kwargs = dict(mar=mar, x=x, mask=mask, mask_to_pred=None, class_embedding=class_embedding, cookbook=cookbook, gt_indices=gt_indices, warmup=warmup, cfg_scale=None)
+        loss_dict = self.train_diffusion.training_losses(self.score_model, x_start, t, model_kwargs)
+
+        return loss_dict["mse"], loss_dict["ce"], loss_dict["re"], loss_dict["logits"], loss_dict["q"], loss_dict["pi"], loss_dict["score"], loss_dict["temb"], loss_dict["scale"]
+
+    def sample(self, mar, x, mask, mask_to_pred, class_embedding, cookbook, temperature=1.0, cfg=1.0, mode="diffusion", imgs=None):
+
+        # print(f"DDPMLoss.sample - x: {x.shape}, mask: {mask.shape}, class_embedding: {class_embedding.shape}")
+
+        bsz, c, h, w = x.shape
+
+        # diffusion loss sampling
+        if not cfg == 1.0:
+            # noise = torch.randn(((bsz // 2) * seq_len), self.in_channels).cuda()
+            noise = torch.randn_like(x[:(bsz // 2)])
+            noise = torch.cat([noise, noise], dim=0)
+            model_kwargs = dict(mar=mar, x=x, mask=mask, mask_to_pred=mask_to_pred, class_embedding=class_embedding, cookbook=cookbook, gt_indices=None, warmup=False, cfg_scale=cfg)
+            sample_fn = self.score_model.forward_with_cfg
+        else:
+            # noise = torch.randn((bsz * seq_len), self.in_channels).cuda()
+            noise = torch.randn_like(x)
+            model_kwargs = dict(mar=mar, x=x, mask=mask, mask_to_pred=mask_to_pred, class_embedding=class_embedding, cookbook=cookbook, gt_indices=None, warmup=False, cfg_scale=None)
+            sample_fn = self.score_model.forward
+
+        if mode == "reconstruction":
+            # assert cfg == 1.0
+            if imgs is None:
+                raise ValueError(f"x must be provided for mode={mode}, but got None.")
+            x_start = imgs
+            t = torch.tensor([0] * bsz).cuda()
+            # print(f"ScoreModel sample - x_start: {x_start.shape}, t: {t.shape}")
+            model_kwargs["sigma_t"] = _extract_into_tensor(self.gen_diffusion.sqrt_one_minus_alphas_cumprod, t, x_start.shape)
+            model_output, logits, q, pi, z_start, grad_temb, scale = sample_fn(x_start, t, **model_kwargs)
+            sampled_token_latent = q.permute(0, 2, 1).reshape(bsz, -1, h, w)
+        elif mode == "diffusion":
+            sampled_token_latent = self.gen_diffusion.p_sample_loop(
+                sample_fn, noise.shape, noise, clip_denoised=False, model_kwargs=model_kwargs, progress=False,
+                temperature=temperature
+            )
+        else:
+            raise ValueError(f"Unsupported mode: {mode}. Expected 'reconstruction' or 'diffusion'.")
+
+        # sampled_token_latent = sampled_token_latent.reshape(bsz, seq_len, -1)
+        # sampled_token_latent = sampled_token_latent[mask_to_pred.nonzero(as_tuple=True)]
+
+        return sampled_token_latent
+
+class ScoreModel(nn.Module):
+    """
+    Unified MAR-based score model used for both training and sampling.
+    """
+    def __init__(self, target_channels):
+        super().__init__()
+        self.in_channels = target_channels
+
+    def forward(self, x_t, t, sigma_t, mar, x, mask, mask_to_pred, class_embedding, cookbook, gt_indices, warmup, cfg_scale):
+        """
+        x_t : [B, L, D]
+        t   : [B] or scalar
+        z, mask: MAR encoder outputs and masks
+        cookbook: codebook matrix [K, D]
+        """
+
+        with torch.enable_grad():
+
+            # print(f"ScoreModel forward - x: {x.shape}, x_t: {x_t.shape}, t: {t.shape}, class_embedding: {class_embedding.shape}")
+
+            bsz, c, h, w = x.shape
+            k = cookbook.shape[0]
+            mask = mask.to(x.dtype).detach()
+            mask_spatial = mask.view(bsz, mar.mask_h, mar.mask_w)
+            # mask_upsampled = mask.view(bsz, mar.seq_h, mar.seq_w).repeat_interleave(mar.patch_size, dim=1).repeat_interleave(mar.patch_size, dim=2)
+            x_t = x_t.requires_grad_(True)
+
+            x_stacked = torch.cat([x, x_t], dim=0)
+            z_stacked = mar.z_proj(x_stacked.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
+            # z_stacked = mar.z_proj_ln(z_stacked).permute(0, 3, 1, 2)
+
+            z, z_t = torch.chunk(z_stacked, chunks=2, dim=0)
+            z_start = z.clone().detach()
+
+            z_masked = ((1.0 - mask_spatial.unsqueeze(dim=1)) * z) + (mask_spatial.unsqueeze(dim=1) * z_t)
+            z_tokens = self.patchify(z_masked, mar)
+            
+            z_c = mar.z_proj(cookbook).detach()
+            # z_c = mar.z_proj_ln(z_c).detach()
+
+            # x_combined = ((1.0 - mask_spatial.unsqueeze(dim=1)) * x) + (mask_spatial.unsqueeze(dim=1) * x_t) 
+            # x_tokens = self.patchify(x_combined, mar)
+            # z_tokens = mar.z_proj(x_tokens)
+            # z_start = x.clone().detach()
+            # cookbook_embedding = cookbook.detach()
+
+            # time embedding
+            # t = t.reshape(bsz, seq_len)
+            # t_padded = torch.cat([torch.zeros(bsz, mar.buffer_size, dtype=t.dtype, device=t.device), t], dim=1)
+            # t_padded = t_padded.flatten(start_dim=0, end_dim=1)
+
+            # t = t.view(bsz, seq_len)[:, 0]
+            t_freq = mar.t_embedder.timestep_embedding(t, mar.t_embedder.frequency_embedding_size)
+            # t_freq = t_freq.requires_grad_(True)
+            t_embedding = mar.t_embedder.mlp(t_freq)
+
+            # encoder
+            z = mar.forward_mae_encoder(z_tokens, mask, t_embedding, class_embedding)
+
+            # decoder
+            # h = mar.forward_mae_decoder(z, mask, t_embedding, class_embedding)
+
+            # final layer
+            # word_embedding = mar.word_embedding
+            # word_embedding = torch.zeros(mar.cookbook_size, mar.final_layer.model_channels, dtype=x.dtype, device=x.device)
+            logits, q, pi = mar.final_layer(mar, z, t_embedding, class_embedding, z_c)
+
+            # energy
+            reg_term = mar.alpha * 0.5 * (q ** 2).sum(dim=-1)
+            lse_term = mar.beta * torch.logsumexp(logits, dim=-1)
+            energy = reg_term - lse_term
+
+            # score
+            score = torch.autograd.grad(
+                outputs=energy, 
+                inputs=x_t,
+                grad_outputs=torch.ones_like(energy),
+                create_graph=True
+                )[0]
+
+            # score = self.unpatchify(score, mar)
+            model_output = score * sigma_t.detach()
+            
+            # model_output = mar.unpatchify(q)
+            grad_temb = torch.zeros_like(score)
+
+            # print(f"ScoreModel forward - model_output: {model_output.mean()}, q: {q.mean()}, logits_ce: {logits_ce.mean()}")
+            # print(f"ScoreModel forward - score: {score.mean()}, grad_temb: {grad_temb.mean()}")
+
+        return model_output, logits, q, pi, z_start, grad_temb, sigma_t
+
+    def patchify(self, x, mar):
+        bsz, d, h, w = x.shape
+        p = mar.patch_size
+        h_, w_ = h // p, w // p
+
+        x = x.reshape(bsz, d, h_, p, w_, p)
+        x = torch.einsum('nchpwq->nhwcpq', x)
+        x = x.reshape(bsz, h_ * w_, d * p ** 2)
+        return x  # [n, l, d]
+
+    def unpatchify(self, x, mar):
+        bsz, l, d = x.shape
+        h_ = w_ = int(l ** 0.5)
+        p = mar.patch_size
+        c = mar.vae_embed_dim
+
+        x = x.reshape(bsz, h_, w_, c, p, p)
+        x = torch.einsum('nhwcpq->nchpwq', x)
+        x = x.reshape(bsz, c, h_ * p, w_ * p)
+        return x  # [n, c, h, w]
+
+    def forward_with_cfg(self, x_t, t, **kwargs):
+        half = x_t[: len(x_t) // 2]
+        combined = torch.cat([half, half], dim=0)
+        model_output, *extras = self.forward(combined, t, **kwargs)
+        eps, rest = model_output[:, :self.in_channels], model_output[:, self.in_channels:]
+        cond_eps, uncond_eps = torch.split(eps, len(eps) // 2, dim=0)
+        half_eps = uncond_eps + kwargs['cfg_scale'] * (cond_eps - uncond_eps)
+        eps = torch.cat([half_eps, half_eps], dim=0)
+        return torch.cat([eps, rest], dim=1), *extras
+
+
+class DetachedJacobianVJP(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, q, x, u):
+        """
+        Forward: s = J_Q(x)^T * u
+        Block gradients flowing back through J_Q.
+        """
+        with torch.enable_grad():
+            score = torch.autograd.grad(
+                outputs=q,
+                inputs=x,
+                grad_outputs=u,
+                create_graph=False, 
+                retain_graph=True
+            )[0]
+
+        ctx.save_for_backward(q, x)
+        return score
+
+    @staticmethod
+    def backward(ctx, grad_s):
+        """
+        Backward: dL/du = J_Q(x) * grad_s
+        This computes the Jacobian-Vector Product (JVP).
+        """
+        q, x = ctx.saved_tensors
+        
+        if grad_s is None:
+            return None, None, None
+        
+        with torch.enable_grad():
+            dummy = torch.zeros_like(q, requires_grad=True)
+            
+            vjp_dummy = torch.autograd.grad(
+                outputs=q,
+                inputs=x,
+                grad_outputs=dummy,
+                create_graph=True, 
+                retain_graph=True
+            )[0]
+            
+            grad_u = torch.autograd.grad(
+                outputs=vjp_dummy,
+                inputs=dummy,
+                grad_outputs=grad_s,
+                create_graph=False
+            )[0]
+
+        return None, None, grad_u
+
+def _extract_into_tensor(arr, timesteps, broadcast_shape):
+    """
+    Extract values from a 1-D numpy array for a batch of indices.
+    :param arr: the 1-D numpy array.
+    :param timesteps: a tensor of indices into the array to extract.
+    :param broadcast_shape: a larger shape of K dimensions with the batch
+                            dimension equal to the length of timesteps.
+    :return: a tensor of shape [batch_size, 1, ...] where the shape has K dims.
+    """
+    res = torch.from_numpy(arr).to(device=timesteps.device)[timesteps].float()
+    while len(res.shape) < len(broadcast_shape):
+        res = res[..., None]
+    return res + torch.zeros(broadcast_shape, device=timesteps.device)
