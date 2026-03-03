@@ -8,10 +8,25 @@ pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
 pip install tensorboard tqdm scipy einops timm torch-fidelity opencv-python pytorch-lightning omegaconf
 
 # Clone repo
+cd [WORK_DIR]
 git clone https://github.com/ljun0004/aebm.git
+
+# Download pretrained vae model
+cd [VAE_PATH]
+wget -c https://ommer-lab.com/files/latent-diffusion/vq-f8-n256.zip
 
 # Download dataset
 cd [IMAGENET_PATH]
 wget https://image-net.org/data/ILSVRC/2012/ILSVRC2012_img_train.tar
 tar -xvf ILSVRC2012_img_train.tar && rm -f ILSVRC2012_img_train.tar
 find . -name "*.tar" | while read NAME ; do mkdir -p "${NAME%.tar}"; tar -xvf "${NAME}" -C "${NAME%.tar}"; rm -f "${NAME}"; done
+
+# Cache dataset (use cache_slurm.sh on HPC)
+cd [WORK_DIR]
+chmod +x cache.sh
+./cache.sh
+
+# Training (use train_slurm.sh on HPC)
+cd [WORK_DIR]
+chmod +x train.sh
+./train.sh
