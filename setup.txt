@@ -17,7 +17,7 @@ wget -c https://ommer-lab.com/files/latent-diffusion/vq-f8-n256.zip
 
 # Download dataset
 cd [IMAGENET_PATH]
-wget https://image-net.org/data/ILSVRC/2012/ILSVRC2012_img_train.tar
+wget -c --no-check-certificate --user=YOUR_IMAGE_NET_USERNAME --ask-password "https://image-net.org/data/ILSVRC/2012/ILSVRC2012_img_train.tar"
 tar -xvf ILSVRC2012_img_train.tar && rm -f ILSVRC2012_img_train.tar
 find . -name "*.tar" | while read NAME ; do mkdir -p "${NAME%.tar}"; tar -xvf "${NAME}" -C "${NAME%.tar}"; rm -f "${NAME}"; done
 
