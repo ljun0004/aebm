@@ -87,7 +87,7 @@ def get_args_parser():
                         help='lower lr bound for cyclic schedulers that hit 0')
     parser.add_argument('--lr_schedule', type=str, default='constant',
                         help='learning rate schedule')
-    parser.add_argument('--warmup_epochs', type=int, default=100, metavar='N',
+    parser.add_argument('--warmup_epochs', type=int, default=None, metavar='N',
                         help='epochs to warmup LR')
     parser.add_argument('--base_warmup_epochs', type=int, default=100, metavar='N',
                         help='epochs to warmup LR')
