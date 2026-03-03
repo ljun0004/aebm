@@ -1,15 +1,14 @@
+# Create environment
 conda create -n aebm python=3.12
 conda activate aebm
 
+# Install dependencies
 python -m pip install --upgrade pip
-
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
-pip install tensorboard
-pip install tqdm
-pip install scipy
-pip install einops
-pip install timm
-pip install torch-fidelity
-pip install opencv-python
-pip install pytorch-lightning
-pip install omegaconf
+pip install tensorboard tqdm scipy einops timm torch-fidelity opencv-python pytorch-lightning omegaconf
+
+# Download dataset
+cd [IMAGENET_PATH]
+wget https://image-net.org/data/ILSVRC/2012/ILSVRC2012_img_train.tar
+tar -xvf ILSVRC2012_img_train.tar && rm -f ILSVRC2012_img_train.tar
+find . -name "*.tar" | while read NAME ; do mkdir -p "${NAME%.tar}"; tar -xvf "${NAME}" -C "${NAME%.tar}"; rm -f "${NAME}"; done
