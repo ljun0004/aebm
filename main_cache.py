@@ -31,7 +31,7 @@ def get_args_parser():
     # VAE parameters
     parser.add_argument('--img_size', default=256, type=int,
                         help='images input size')
-    parser.add_argument('--vae_ckpt', default="pretrained_models/vae/kl16.ckpt", type=str,
+    parser.add_argument('--vae_path', default="pretrained_models/vae/kl16.ckpt", type=str,
                         help='vae/vqgan checkpoint path')
     parser.add_argument('--vae_cfg', default="pretrained_models/vae/kl16.ckpt", type=str,
                         help='vae/vqgan configuration path')
@@ -113,7 +113,7 @@ def main(args):
     # define the vae
     print(f"VAE mode: {args.vae_mode}")
     if args.vae_mode == "kl":
-        vae = AutoencoderKL(embed_dim=args.vae_embed_dim, ch_mult=(1, 1, 2, 2, 4), ckpt_path=args.vae_ckpt).cuda().eval()
+        vae = AutoencoderKL(embed_dim=args.vae_embed_dim, ch_mult=(1, 1, 2, 2, 4), ckpt_path=args.vae_path).cuda().eval()
         # config = OmegaConf.load(args.vae_cfg).model
         # vae = AutoencoderKL(ddconfig=config.params.ddconfig,
         #                 lossconfig=config.params.lossconfig,
@@ -127,7 +127,7 @@ def main(args):
                         # lossconfig=config.params.lossconfig,
                         n_embed=config.params.n_embed,
                         embed_dim=config.params.embed_dim,
-                        ckpt_path=args.vae_ckpt,
+                        ckpt_path=args.vae_path,
                         ).cuda().eval()
         cookbook_size = vae.n_embed
     else:
