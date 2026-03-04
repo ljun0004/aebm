@@ -40,9 +40,9 @@ def get_args_parser():
     parser.add_argument('--img_size', default=256, type=int,
                         help='images input size')
     parser.add_argument('--vae_path', default="pretrained_models/vae/kl16.ckpt", type=str,
-                        help='vae/vqgan checkpoint path')
+                        help='vae or vqgan checkpoint path')
     parser.add_argument('--vae_cfg', default="pretrained_models/vae/kl16.ckpt", type=str,
-                        help='vae/vqgan configuration path')
+                        help='vae or vqgan configuration path')
     parser.add_argument('--vae_embed_dim', default=16, type=int,
                         help='vae output embedding dimension')
     parser.add_argument('--vae_stride', default=16, type=int,
