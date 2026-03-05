@@ -503,7 +503,7 @@ def main(args):
                             loss_scaler=loss_scaler, epoch=epoch, ema_params=ema_params, epoch_name=None)
 
         # online evaluation
-        if args.online_eval and (epoch % args.eval_freq == 0 or epoch + 1 == args.epochs) and epoch > 0:
+        if args.online_eval and (epoch % args.eval_freq == 0 or epoch + 1 == args.epochs):
             torch.cuda.empty_cache()
             if not (args.cfg == 1.0 or args.cfg == 0.0):
                 evaluate(model_without_ddp, vae, ema_params, args, epoch, batch_size=args.eval_bsz // 2,
