@@ -87,7 +87,8 @@ def train_one_epoch(model, vae,
                 raise NotImplementedError
 
         # forward
-        with torch.cuda.amp.autocast(enabled=True, dtype=torch.bfloat16):
+        # with torch.cuda.amp.autocast(enabled=True, dtype=torch.bfloat16):
+        with torch.amp.autocast('cuda', enabled=True, dtype=torch.bfloat16):
             loss, ddpmloss, celoss, reloss, logitsnorm, qnorm, pimax, scorenorm, tembnorm, scale = model(x, labels, gt_indices=gt_indices, cookbook=cookbook, warmup=warmup)
 
         loss_value = loss.item()
