@@ -15,6 +15,7 @@ from torch.nn import functional as F
 from torch.nn.utils import weight_norm
 # import pytorch_lightning as L
 from itertools import chain
+from torch.nn.attention import sdpa_kernel, SDPBackend
 
 from diffusion import create_diffusion
 from models.ddpmloss import DDPMLoss
@@ -704,7 +705,8 @@ class EBTBlock(nn.Module):
             shift_attn, scale_attn, gate_attn, shift_mlp, scale_mlp, gate_mlp = self.adaLN_modulation(y).chunk(self.num_adaLN_params, dim=-1)
             x_norm = self.norm1(x)
             x_mod = modulate(x_norm, shift_attn, scale_attn)
-            with torch.backends.cuda.sdp_kernel(enable_flash=False, enable_mem_efficient=False, enable_math=True):
+            # with torch.backends.cuda.sdp_kernel(enable_flash=False, enable_mem_efficient=False, enable_math=True):
+            with sdpa_kernel(SDPBackend.MATH):
                 attn = self.attn(x_mod)
             x = x + gate_attn * attn
             x_norm = self.norm2(x)
@@ -712,7 +714,8 @@ class EBTBlock(nn.Module):
             x = x + gate_mlp * self.mlp(x_mod)
         else:
             x_norm = self.norm1(x)
-            with torch.backends.cuda.sdp_kernel(enable_flash=False, enable_mem_efficient=False, enable_math=True):
+            # with torch.backends.cuda.sdp_kernel(enable_flash=False, enable_mem_efficient=False, enable_math=True):
+            with sdpa_kernel(SDPBackend.MATH):
                 attn = self.attn(x_norm)
             x = x + attn
             x_norm = self.norm2(x)
