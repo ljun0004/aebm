@@ -41,7 +41,7 @@ def get_args_parser():
                         help='images input size')
     parser.add_argument('--vae_path', default="pretrained_models/vae/kl16.ckpt", type=str,
                         help='vae or vqgan checkpoint path')
-    parser.add_argument('--vae_cfg', default="pretrained_models/vae/kl16.ckpt", type=str,
+    parser.add_argument('--vae_cfg', default=None, type=str,
                         help='vae or vqgan configuration path')
     parser.add_argument('--vae_embed_dim', default=16, type=int,
                         help='vae output embedding dimension')
@@ -103,8 +103,8 @@ def get_args_parser():
                         help='reg term scale (default: 1.0)')
     parser.add_argument('--beta', type=float, default=1.0,
                         help='lse term scale (default: 1.0)')
-    parser.add_argument('--min_logit_scale', type=float, default=1.0,
-                        help='min logits scale (default: 1.0)')
+    parser.add_argument('--min_logit_scale', type=float, default=0.0,
+                        help='min logits scale (default: 0.0)')
     parser.add_argument('--max_logit_scale', type=float, default=1.0,
                         help='max logits scale (default: 1.0)')
 
