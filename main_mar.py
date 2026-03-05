@@ -335,7 +335,7 @@ def main(args):
     if args.warmup_epochs is None:  # only base_lr is specified
         args.warmup_epochs = args.base_warmup_epochs * eff_batch_size / 2048
 
-    print("base lr: %.2e" % (args.lr * 256 / eff_batch_size))
+    print("base lr: %.2e" % args.blr)
     print("actual lr: %.2e" % args.lr)
     print("base warmup epochs: %.2e" % args.base_warmup_epochs)
     print("actual warmup epochs: %.2e" % args.warmup_epochs)
