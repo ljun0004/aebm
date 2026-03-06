@@ -8,8 +8,8 @@ IMAGENET_PATH="/root/highspeedstorage/Junn-US-West-4/datasets/imagenet/train"
 CACHED_PATH="/root/highspeedstorage/Junn-US-West-4/datasets/imagenet/cached/vq-f8-n256"
 VAE_PATH="/root/highspeedstorage/Junn-US-West-4/pretrained_models/vq-f8-n256/model.ckpt"
 VAE_CFG="/root/highspeedstorage/Junn-US-West-4/aebm/first_stage_models/vq-f8-n256/config.yaml"
-LOAD_PATH="/root/highspeedstorage/Junn-US-West-4/ckpts/vq-f8-n256/mar_large/masked_alpha1.0_beta1.0_ddpm1.0_ce1.0_re0.0_mask32x32_seqlen16x16_zprojtied_wresmlp_L2norm_wu5_wd0.02_gc3_bsz96x8"
-SAVE_PATH="/root/highspeedstorage/Junn-US-West-4/ckpts/vq-f8-n256/mar_large/masked_alpha1.0_beta1.0_ddpm1.0_ce1.0_re0.0_mask32x32_seqlen16x16_zprojtied_wresmlp_L2norm_wu5_wd0.02_gc3_bsz96x8"
+LOAD_PATH="/root/highspeedstorage/Junn-US-West-4/ckpts/vq-f8-n256/mar_large/masked_alpha1.0_beta1.0_ddpm1.0_ce1.0_re0.0_mask32x32_seqlen16x16_zprojtied_wresmlp_L2norm_wu5_wd0.02_gc3_bsz1024"
+SAVE_PATH="/root/highspeedstorage/Junn-US-West-4/ckpts/vq-f8-n256/mar_large/masked_alpha1.0_beta1.0_ddpm1.0_ce1.0_re0.0_mask32x32_seqlen16x16_zprojtied_wresmlp_L2norm_wu5_wd0.02_gc3_bsz1024"
 LOG_PATH="/root/highspeedstorage/Junn-US-West-4/logs"
 
 ## -----------------------------
@@ -73,11 +73,11 @@ torchrun \
     --vae_stride 8 \
     --patch_size 2 \
     --model mar_large \
-    --batch_size 96 \
+    --batch_size 112 \
     --num_workers 8 \
     --epochs 100 \
-    --base_warmup_epochs 100 \
-    --blr 1.0e-4 \
+    --warmup_epochs 40 \
+    --lr 4.0e-4 \
     --weight_decay 0.02 \
     --grad_clip 3.0 \
     --alpha 1.0 \
