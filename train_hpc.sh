@@ -73,9 +73,9 @@ torchrun \
     --vae_stride 8 \
     --patch_size 2 \
     --model mar_large \
-    --batch_size 112 \
+    --batch_size 128 \
     --num_workers 8 \
-    --epochs 100 \
+    --epochs 400 \
     --warmup_epochs 40 \
     --lr 4.0e-4 \
     --weight_decay 0.02 \
