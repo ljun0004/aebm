@@ -4,7 +4,7 @@
 ## -----------------------------
 ## Path Definitions
 ## -----------------------------
-PROJECT_ROOT="/root/highspeedstorage/Junn"
+PROJECT_ROOT="/root/Junn"
 IMAGENET_PATH="${PROJECT_ROOT}/datasets/imagenet/train"
 CACHED_PATH="${PROJECT_ROOT}/datasets/imagenet/cached/vq-f8-n256"
 VAE_PATH="${PROJECT_ROOT}/pretrained_models/vq-f8-n256/model.ckpt"
