@@ -4,7 +4,7 @@
 ## -----------------------------
 ## Path Definitions
 ## -----------------------------
-PROJECT_ROOT="/root/highspeedstorage/Junn"
+PROJECT_ROOT="/root/Junn"
 IMAGENET_PATH="${PROJECT_ROOT}/datasets/imagenet/train"
 CACHED_PATH="${PROJECT_ROOT}/datasets/imagenet/cached/vq-f8-n256"
 VAE_PATH="${PROJECT_ROOT}/pretrained_models/vq-f8-n256/model.ckpt"
@@ -64,7 +64,6 @@ echo "========================================"
 ## -----------------------------
 cd "${PROJECT_ROOT}/aebm"
 echo "Starting training..."
-
 torchrun \
     --nproc_per_node=${NPROC_PER_NODE} \
     main_mar.py \
@@ -79,8 +78,8 @@ torchrun \
     --batch_size 128 \
     --num_workers 8 \
     --epochs 40 \
-    --warmup_epochs 40 \
-    --lr 4.0e-4 \
+    --base_warmup_epochs 100 \
+    --blr 1.0e-4 \
     --weight_decay 0.02 \
     --grad_clip 3.0 \
     --alpha 1.0 \
