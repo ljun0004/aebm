@@ -329,11 +329,12 @@ def main(args):
 
     eff_batch_size = args.batch_size * misc.get_world_size()
 
-    if args.lr is None:  # only base_lr is specified
-        args.lr = args.blr * eff_batch_size / 256
+    if args.lr is None:
+        args.lr = args.blr * (eff_batch_size / 256) ** 0.5
 
-    if args.warmup_epochs is None:  # only base_lr is specified
-        args.warmup_epochs = args.base_warmup_epochs * eff_batch_size / 2048
+    if args.warmup_epochs is None:
+        args.warmup_epochs = args.base_warmup_epochs 
+        # * eff_batch_size / 2048
 
     print("base lr: %.2e" % args.blr)
     print("actual lr: %.2e" % args.lr)
