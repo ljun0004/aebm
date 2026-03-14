@@ -35,6 +35,7 @@ echo "========================================"
 # conda activate aebm || conda activate "${CONDA_ENVS_PATH}/aebm"
 # conda info --envs
 pip install tensorboard tqdm scipy einops timm torch-fidelity opencv-python pytorch-lightning omegaconf
+export OMP_NUM_THREADS=1
 
 echo "===== Environment Check ====="
 which python
