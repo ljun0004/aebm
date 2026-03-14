@@ -87,9 +87,7 @@ def get_args_parser():
                         help='lower lr bound for cyclic schedulers that hit 0')
     parser.add_argument('--lr_schedule', type=str, default='constant',
                         help='learning rate schedule')
-    parser.add_argument('--warmup_epochs', type=int, default=None, metavar='N',
-                        help='epochs to warmup LR')
-    parser.add_argument('--base_warmup_epochs', type=int, default=100, metavar='N',
+    parser.add_argument('--warmup_epochs', type=int, default=100, metavar='N',
                         help='epochs to warmup LR')
     parser.add_argument('--ema_rate', default=0.9999, type=float)
 
@@ -332,14 +330,9 @@ def main(args):
     if args.lr is None:
         args.lr = args.blr * (eff_batch_size / 256) ** 0.5
 
-    if args.warmup_epochs is None:
-        args.warmup_epochs = args.base_warmup_epochs 
-        # * eff_batch_size / 2048
-
     print("base lr: %.2e" % args.blr)
     print("actual lr: %.2e" % args.lr)
-    print("base warmup epochs: %.2e" % args.base_warmup_epochs)
-    print("actual warmup epochs: %.2e" % args.warmup_epochs)
+    print("warmup epochs: %.2e" % args.warmup_epochs)
     print("effective batch size: %d" % eff_batch_size)
 
     if args.distributed:
