@@ -104,28 +104,23 @@ class ScoreModel(nn.Module):
             bsz, c, h, w = x.shape
             k = cookbook.shape[0]
             mask = mask.to(x.dtype).detach()
-            mask_spatial = mask.view(bsz, mar.mask_h, mar.mask_w)
-            # mask_upsampled = mask.view(bsz, mar.seq_h, mar.seq_w).repeat_interleave(mar.patch_size, dim=1).repeat_interleave(mar.patch_size, dim=2)
+            # mask_spatial = mask.view(bsz, mar.token_h, mar.token_w)
+            # mask_spatial = mask.view(bsz, mar.seq_h, mar.seq_w).repeat_interleave(mar.patch_size, dim=1).repeat_interleave(mar.patch_size, dim=2)
             x_t = x_t.requires_grad_(True)
 
-            x_stacked = torch.cat([x, x_t], dim=0)
-            z_stacked = mar.z_proj(x_stacked.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
-            # z_stacked = mar.z_proj_ln(z_stacked).permute(0, 3, 1, 2)
+            z = mar.z_proj(x.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
+            z_t = mar.z_proj(x_t.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
+            z_tokens = self.patchify(z, mar)
+            zt_tokens = self.patchify(z_t, mar)
+            z_masked = ((1.0 - mask.unsqueeze(dim=-1)) * z_tokens) + (mask.unsqueeze(dim=-1) * zt_tokens)
 
-            z, z_t = torch.chunk(z_stacked, chunks=2, dim=0)
-            z_start = z.clone().detach()
+            # x_tokens = self.patchify(x, mar)
+            # xt_tokens = self.patchify(x_t, mar)
+            # x_masked = ((1.0 - mask.unsqueeze(dim=-1)) * x_tokens) + (mask.unsqueeze(dim=-1) * xt_tokens)
+            # z_masked = mar.z_proj(x_masked)
 
-            z_masked = ((1.0 - mask_spatial.unsqueeze(dim=1)) * z) + (mask_spatial.unsqueeze(dim=1) * z_t)
-            z_tokens = self.patchify(z_masked, mar)
-            
+            z_start = z.detach()
             z_c = mar.z_proj(cookbook).detach()
-            # z_c = mar.z_proj_ln(z_c).detach()
-
-            # x_combined = ((1.0 - mask_spatial.unsqueeze(dim=1)) * x) + (mask_spatial.unsqueeze(dim=1) * x_t) 
-            # x_tokens = self.patchify(x_combined, mar)
-            # z_tokens = mar.z_proj(x_tokens)
-            # z_start = x.clone().detach()
-            # cookbook_embedding = cookbook.detach()
 
             # time embedding
             # t = t.reshape(bsz, seq_len)
@@ -138,7 +133,7 @@ class ScoreModel(nn.Module):
             t_embedding = mar.t_embedder.mlp(t_freq)
 
             # encoder
-            z = mar.forward_mae_encoder(z_tokens, mask, t_embedding, class_embedding)
+            h = mar.forward_mae_encoder(z_masked, mask, t_embedding, class_embedding)
 
             # decoder
             # h = mar.forward_mae_decoder(z, mask, t_embedding, class_embedding)
@@ -146,7 +141,7 @@ class ScoreModel(nn.Module):
             # final layer
             # word_embedding = mar.word_embedding
             # word_embedding = torch.zeros(mar.cookbook_size, mar.final_layer.model_channels, dtype=x.dtype, device=x.device)
-            logits, q, pi = mar.final_layer(mar, z, t_embedding, class_embedding, z_c)
+            logits, q, pi = mar.final_layer(mar, h, t_embedding, class_embedding, z_c)
 
             # energy
             reg_term = mar.alpha * 0.5 * (q ** 2).sum(dim=-1)
