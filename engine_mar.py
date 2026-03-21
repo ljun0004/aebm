@@ -16,6 +16,7 @@ import os
 import copy
 import time
 import hashlib
+import contextlib
 
 
 def update_ema(target_params, source_params, rate=0.99):
@@ -41,9 +42,9 @@ def train_one_epoch(model, vae,
     metric_logger = misc.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', misc.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     header = 'Epoch: [{}]'.format(epoch)
-    print_freq = 20
+    print_freq = args.accum_iter
 
-    optimizer.zero_grad()
+    optimizer.zero_grad(set_to_none=True)
 
     if log_writer is not None:
         print('log_dir: {}'.format(log_writer.log_dir))
@@ -51,7 +52,7 @@ def train_one_epoch(model, vae,
     for data_iter_step, (samples, labels) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
 
         # we use a per iteration (instead of per epoch) lr scheduler
-        learningrate, warmup = lr_sched.adjust_learning_rate(optimizer, data_iter_step / len(data_loader) + epoch, args)
+        _, warmup = lr_sched.adjust_learning_rate(optimizer, data_iter_step / len(data_loader) + epoch, args)
 
         labels = labels.to(device, non_blocking=True)
 
@@ -86,47 +87,62 @@ def train_one_epoch(model, vae,
             else:
                 raise NotImplementedError
 
+        update_grad =  ((data_iter_step + 1) % args.accum_iter == 0) or ((data_iter_step + 1) == len(data_loader))
+
+        if hasattr(model, "no_sync") and not update_grad:
+            sync_context = model.no_sync
+            # print("Using no_sync for gradient accumulation")
+        else:
+            sync_context = contextlib.nullcontext
+
         # forward
-        # with torch.cuda.amp.autocast(enabled=True, dtype=torch.bfloat16):
-        with torch.amp.autocast('cuda', enabled=True, dtype=torch.bfloat16):
-            loss, ddpmloss, celoss, reloss, logitsnorm, qnorm, pimax, scorenorm, tembnorm, scale = model(x, labels, gt_indices=gt_indices, cookbook=cookbook, warmup=warmup)
+        with sync_context():
+            # with torch.cuda.amp.autocast(enabled=True, dtype=torch.bfloat16):
+            with torch.amp.autocast('cuda', enabled=True, dtype=torch.bfloat16):
+                loss_ori, ddpmloss, celoss, reloss, logitsnorm, qnorm, pimax, scorenorm, tembnorm, scale = model(x, labels, gt_indices=gt_indices, cookbook=cookbook, warmup=warmup)
 
-        loss_value = loss.item()
-        ddpmloss_value = ddpmloss.item()
-        celoss_value = celoss.item()
-        reloss_value = reloss.item()
-        logitsnorm_value = logitsnorm.item()
-        qnorm_value = qnorm.item()
-        pimax_value = pimax.item()
-        scorenorm_value = scorenorm.item()
-        tembnorm_value = tembnorm.item()
-        scale_value = scale.item()
+            loss = loss_ori / args.accum_iter
 
-        if not math.isfinite(loss_value):
-            print("Loss is {}, stopping training".format(loss_value))
-            sys.exit(1)
+            gradnorm = loss_scaler(loss, optimizer, clip_grad=args.grad_clip, parameters=model.parameters(), update_grad=update_grad)
+            # print(f"train_one_epoch: loss: {loss.item()}, gradnorm: {gradnorm.item() if gradnorm is not None else None}")
 
-        gradnorm = loss_scaler(loss, optimizer, clip_grad=args.grad_clip, parameters=model.parameters(), update_grad=True)
-        gradnorm_value = gradnorm.item()
+            # with torch.no_grad():
+            #     mar = model.module if hasattr(model, "module") else model
+            #     mar.final_layer.proj.weight_g.clamp_(0.1, 1.0)
 
-        # with torch.no_grad():
-        #     mar = model.module if hasattr(model, "module") else model
-        #     mar.final_layer.proj.weight_g.clamp_(0.1, 1.0)
+        if update_grad:
+            optimizer.zero_grad(set_to_none=True)
+            torch.cuda.synchronize()
+            update_ema(ema_params, model_params, rate=args.ema_rate)
 
-        optimizer.zero_grad()
+        metrics = {
+                    "loss": loss_ori.item(), 
+                    "ddpm": ddpmloss.item(), 
+                    "ce": celoss.item(), 
+                    "re": reloss.item(), 
+                    "logits": logitsnorm.item(), 
+                    "q": qnorm.item(), 
+                    "pi": pimax.item(), 
+                    "score": scorenorm.item(), 
+                    "temb": tembnorm.item(), 
+                    "scale": scale.item()
+                }
 
-        torch.cuda.synchronize()
+        if gradnorm is not None:
+            metrics["grad"] = gradnorm.item()
 
-        update_ema(ema_params, model_params, rate=args.ema_rate)
-
-        metric_logger.update(loss=loss_value, ddpm=ddpmloss_value, ce=celoss_value, re=reloss_value, grad=gradnorm_value, logits=logitsnorm_value, q=qnorm_value, pi=pimax_value, score=scorenorm_value, temb=tembnorm_value, scale=scale_value)
+        metric_logger.update(**metrics)
 
         lr = optimizer.param_groups[0]["lr"]
         metric_logger.update(lr=lr)
 
-        loss_value_reduce = misc.all_reduce_mean(loss_value)
-        ddpmloss_value_reduce = misc.all_reduce_mean(ddpmloss_value)
-        celoss_value_reduce = misc.all_reduce_mean(celoss_value)
+        if not math.isfinite(metrics["loss"]):
+            print("Loss is {}, stopping training".format(metrics["loss"]))
+            sys.exit(1)
+
+        loss_value_reduce = misc.all_reduce_mean(metrics["loss"])
+        ddpmloss_value_reduce = misc.all_reduce_mean(metrics["ddpm"])
+        celoss_value_reduce = misc.all_reduce_mean(metrics["ce"])
 
         if log_writer is not None:
             """ We use epoch_1000x as the x-axis in tensorboard.
