@@ -9,8 +9,8 @@ IMAGENET_PATH="${PROJECT_ROOT}/datasets/imagenet/train"
 CACHED_PATH="${PROJECT_ROOT}/datasets/imagenet/cached/vq-f8-n256"
 VAE_PATH="${PROJECT_ROOT}/pretrained_models/vq-f8-n256/model.ckpt"
 VAE_CFG="${PROJECT_ROOT}/aebm/first_stage_models/vq-f8-n256/config.yaml"
-LOAD_PATH="${PROJECT_ROOT}/ckpts/vq-f8-n256/mar_base/masked_alpha1.0_beta1.0_ddpm1.0_ce1.0_re0.0_mask16x16_seqlen16x16_zprojtied_wresmlp_L2norm_blr1e-4_sqrt_wu50_wd0.05_gc3_bsz32*32/checkpoint-last.pth"
-SAVE_PATH="${PROJECT_ROOT}/ckpts/vq-f8-n256/mar_base/masked_alpha1.0_beta1.0_ddpm1.0_ce1.0_re0.0_mask16x16_seqlen16x16_zprojtied_wresmlp_L2norm_blr1e-4_sqrt_wu50_wd0.05_gc3_bsz32*32"
+LOAD_PATH="${PROJECT_ROOT}/ckpts/vq-f8-n256/mar_base/masked_alpha1.0_beta1.0_ddpm1.0_ce1.0_re0.0_mask16x16_seqlen16x16_zprojtied_wresmlp_L2norm_blr1.5e-4_sqrt_wu50_wd0.05_gc3/checkpoint-last.pth"
+SAVE_PATH="${PROJECT_ROOT}/ckpts/vq-f8-n256/mar_base/masked_alpha1.0_beta1.0_ddpm1.0_ce1.0_re0.0_mask16x16_seqlen16x16_zprojtied_wresmlp_L2norm_blr1.5e-4_sqrt_wu50_wd0.05_gc3"
 LOG_PATH="${PROJECT_ROOT}/logs"
 
 ## -----------------------------
@@ -76,8 +76,8 @@ torchrun \
     --vae_stride 8 \
     --patch_size 2 \
     --model mar_base \
-    --batch_size 32 \
-    --accum_iter 32 \
+    --batch_size 128 \
+    --accum_iter 1 \
     --num_workers 16 \
     --epochs 100 \
     --warmup_epochs 50 \
@@ -97,7 +97,7 @@ torchrun \
     --data_path ${IMAGENET_PATH} \
     --resume ${LOAD_PATH} \
     --output_dir ${SAVE_PATH} \
-    --save_freq 5 \
+    --save_freq 10 \
     --save_last_freq 1 \
     --encoder_adaln_mod \
     --decoder_adaln_mod \
