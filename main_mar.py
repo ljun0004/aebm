@@ -31,6 +31,8 @@ def get_args_parser():
     parser.add_argument('--batch_size', default=16, type=int,
                         help='Batch size per GPU (effective batch size is batch_size * # gpus')
     parser.add_argument('--epochs', default=400, type=int)
+    parser.add_argument('--accum_iter', default=1, type=int, 
+                        help='Accumulate gradient iterations (for increasing effective batch size under memory constraints)')
 
     # Model parameters
     parser.add_argument('--model', default='mar_large', type=str, metavar='MODEL',
@@ -323,7 +325,7 @@ def main(args):
     model.to(device)
     model_without_ddp = model
 
-    eff_batch_size = args.batch_size * misc.get_world_size()
+    eff_batch_size = args.batch_size * misc.get_world_size() * args.accum_iter
 
     if args.lr is None:
         args.lr = args.blr * (eff_batch_size / 256) ** 0.5
