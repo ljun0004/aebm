@@ -124,8 +124,6 @@ def get_args_parser():
                         help='Mask ratio distribution std')
 
     # MAR params
-    # parser.add_argument('--mask_ratio_min', type=float, default=0.7,
-    #                     help='Minimum mask ratio')
     parser.add_argument('--grad_clip', type=float, default=3.0,
                         help='Gradient clip')
     parser.add_argument('--attn_dropout', type=float, default=0.1,
@@ -347,8 +345,10 @@ def main(args):
     loss_scaler = NativeScaler(enabled=False)
 
     # resume training
-    if args.resume and os.path.exists(os.path.join(args.resume, "checkpoint-last.pth")):
-        ckpt_path = os.path.join(args.resume, "checkpoint-last.pth")
+    # if args.resume and os.path.exists(os.path.join(args.resume, "checkpoint-last.pth")):
+    if args.resume and os.path.exists(args.resume):
+        # ckpt_path = os.path.join(args.resume, "checkpoint-last.pth")
+        ckpt_path = args.resume
         checkpoint = torch.load(ckpt_path, map_location='cpu', weights_only=False)
         # model_without_ddp.load_state_dict(checkpoint['model'], strict=True)
         msg = model_without_ddp.load_state_dict(checkpoint['model'], strict=False)
