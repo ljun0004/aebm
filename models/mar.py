@@ -473,7 +473,7 @@ class MAR(nn.Module):
 
             # cur_tokens[mask_to_pred.nonzero(as_tuple=True)] = sampled_token_latent[mask_to_pred.nonzero(as_tuple=True)]
             # mask_to_pred_spatial = mask_to_pred.to(cur_tokens.dtype).view(eval_bsz, self.token_h, self.token_w)
-            mask_to_pred_spatial = mask_to_pred.to(cur_tokens.dtype).view(eval_bsz, self.seq_h, self.seq_w).repeat_interleave(2, dim=1).repeat_interleave(2, dim=2)
+            mask_to_pred_spatial = mask_to_pred.to(cur_tokens.dtype).view(eval_bsz, self.seq_h, self.seq_w).repeat_interleave(self.patch_size, dim=1).repeat_interleave(self.patch_size, dim=2)
             cur_tokens = (1.0 - mask_to_pred_spatial.unsqueeze(dim=1)) * cur_tokens + mask_to_pred_spatial.unsqueeze(dim=1) * sampled_token_latent
 
             tokens = cur_tokens.clone()
