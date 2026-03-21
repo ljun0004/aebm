@@ -435,9 +435,13 @@ class MAR(nn.Module):
             mask_ratio = np.cos(math.pi / 2. * (step + 1) / num_iter)
             mask_len = torch.Tensor([np.floor(self.seq_len * mask_ratio)]).cuda()
 
+            # print(f"Sample Tokens - mask_ratio: {mask_ratio}, mask_len: {mask_len}")
+
             # masks out at least one for the next iteration
             mask_len = torch.maximum(torch.Tensor([1]).cuda(),
                                      torch.minimum(torch.sum(mask, dim=-1, keepdims=True) - 1, mask_len))
+            
+            # print(f"Sample Tokens - mask_len: {mask_len}")
 
             # get masking for next iteration and locations to be predicted in this iteration
             mask_next = mask_by_order(mask_len[0], orders, eval_bsz, self.seq_len)
