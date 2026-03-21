@@ -58,8 +58,8 @@ class MAR(nn.Module):
         self.img_size = img_size
         self.vae_stride = vae_stride
         self.patch_size = patch_size
-        self.mask_h = self.mask_w = img_size // vae_stride
-        self.mask_len = self.mask_h * self.mask_w
+        self.token_h = self.token_w = img_size // vae_stride
+        self.token_len = self.token_h * self.token_w
         self.seq_h = self.seq_w = img_size // vae_stride // patch_size
         self.seq_len = self.seq_h * self.seq_w
         self.token_embed_dim = vae_embed_dim * patch_size**2
@@ -269,7 +269,7 @@ class MAR(nn.Module):
         # generate a batch of random generation orders
         orders = []
         for _ in range(bsz):
-            order = np.array(list(range(self.mask_len)))
+            order = np.array(list(range(self.seq_len)))
             np.random.shuffle(order)
             orders.append(order)
         orders = torch.Tensor(np.array(orders)).cuda().long()
@@ -280,10 +280,10 @@ class MAR(nn.Module):
         bsz = x.shape[0]
         mask_rate = self.mask_ratio_generator.rvs(1)[0]
         # mask_rate = 1.0
-        num_masked_tokens = int(np.ceil(self.mask_len * mask_rate))
-        mask = torch.zeros(bsz, self.mask_len, device=x.device)
+        num_masked_tokens = int(np.ceil(self.seq_len * mask_rate))
+        mask = torch.zeros(bsz, self.seq_len, device=x.device)
         mask = torch.scatter(mask, dim=-1, index=orders[:, :num_masked_tokens],
-                             src=torch.ones(bsz, self.mask_len, device=x.device))
+                             src=torch.ones(bsz, self.seq_len, device=x.device))
         return mask
 
     def forward_mae_encoder(self, x, mask, t_embedding, class_embedding):
@@ -382,10 +382,11 @@ class MAR(nn.Module):
         if mask is not None:
             # if mask.dim() > 1:
             #     mask = mask.flatten(start_dim=0, end_dim=1)
-            # mask_upsampled = mask.view(bsz, self.seq_h, self.seq_w).repeat_interleave(2, dim=1).repeat_interleave(2, dim=2).reshape(bsz, -1)
-            ddpmloss_masked = (ddpmloss * mask).sum() / mask.sum()
-            celoss_masked = (celoss * mask).sum() / mask.sum()
-            reloss_masked = (reloss * mask).sum() / mask.sum()
+            mask_spatial = mask.view(bsz, self.seq_h, self.seq_w).repeat_interleave(2, dim=1).repeat_interleave(2, dim=2)
+            mask = mask_spatial.reshape(bsz, -1)
+            ddpmloss_masked = (ddpmloss * mask).sum() / (mask.sum() + 1e-8)
+            celoss_masked = (celoss * mask).sum() / (mask.sum() + 1e-8)
+            reloss_masked = (reloss * mask).sum() / (mask.sum() + 1e-8)
 
         logitsnorm_mean = logitsnorm.mean()
         qnorm_mean = qnorm.mean()
@@ -401,8 +402,8 @@ class MAR(nn.Module):
     def sample_tokens(self, eval_bsz, cookbook, num_iter=64, cfg=1.0, cfg_schedule="linear", temperature=1.0, imgs=None, labels=None, gt_indices=None, sampling_mode="diffusion", progress=False):
 
         # init and sample generation orders
-        mask = torch.ones(eval_bsz, self.mask_len, dtype=torch.bool).cuda()
-        tokens = torch.zeros(eval_bsz, self.vae_embed_dim, self.mask_h, self.mask_w).cuda()
+        mask = torch.ones(eval_bsz, self.seq_len, dtype=torch.bool).cuda()
+        tokens = torch.zeros(eval_bsz, self.vae_embed_dim, self.token_h, self.token_w).cuda()
         orders = self.sample_orders(eval_bsz)
 
         # if imgs is not None:
@@ -432,14 +433,14 @@ class MAR(nn.Module):
 
             # mask ratio for the next round, following MaskGIT and MAGE.
             mask_ratio = np.cos(math.pi / 2. * (step + 1) / num_iter)
-            mask_len = torch.Tensor([np.floor(self.mask_len * mask_ratio)]).cuda()
+            mask_len = torch.Tensor([np.floor(self.seq_len * mask_ratio)]).cuda()
 
             # masks out at least one for the next iteration
             mask_len = torch.maximum(torch.Tensor([1]).cuda(),
                                      torch.minimum(torch.sum(mask, dim=-1, keepdims=True) - 1, mask_len))
 
             # get masking for next iteration and locations to be predicted in this iteration
-            mask_next = mask_by_order(mask_len[0], orders, eval_bsz, self.mask_len)
+            mask_next = mask_by_order(mask_len[0], orders, eval_bsz, self.seq_len)
             if step >= num_iter - 1:
                 mask_to_pred = mask[:eval_bsz].bool()
             else:
@@ -453,7 +454,7 @@ class MAR(nn.Module):
 
             # cfg schedule follow Muse
             if cfg_schedule == "linear":
-                cfg_iter = 1 + (cfg - 1) * (self.mask_len - mask_len[0]) / self.mask_len
+                cfg_iter = 1 + (cfg - 1) * (self.seq_len - mask_len[0]) / self.seq_len
             elif cfg_schedule == "constant":
                 cfg_iter = cfg
             else:
@@ -467,8 +468,8 @@ class MAR(nn.Module):
             # print(f"Sample Tokens - cur_tokens: {cur_tokens.shape}, sampled_token_latent: {sampled_token_latent.shape}, mask_to_pred: {mask_to_pred.shape}")
 
             # cur_tokens[mask_to_pred.nonzero(as_tuple=True)] = sampled_token_latent[mask_to_pred.nonzero(as_tuple=True)]
-            mask_to_pred_spatial = mask_to_pred.to(cur_tokens.dtype).view(eval_bsz, self.mask_h, self.mask_w)
-            # mask_to_pred_upsampled = mask_to_pred.to(cur_tokens.dtype).view(eval_bsz, self.seq_h, self.seq_w).repeat_interleave(2, dim=1).repeat_interleave(2, dim=2)
+            # mask_to_pred_spatial = mask_to_pred.to(cur_tokens.dtype).view(eval_bsz, self.token_h, self.token_w)
+            mask_to_pred_spatial = mask_to_pred.to(cur_tokens.dtype).view(eval_bsz, self.seq_h, self.seq_w).repeat_interleave(2, dim=1).repeat_interleave(2, dim=2)
             cur_tokens = (1.0 - mask_to_pred_spatial.unsqueeze(dim=1)) * cur_tokens + mask_to_pred_spatial.unsqueeze(dim=1) * sampled_token_latent
 
             tokens = cur_tokens.clone()
