@@ -382,7 +382,7 @@ class MAR(nn.Module):
         if mask is not None:
             # if mask.dim() > 1:
             #     mask = mask.flatten(start_dim=0, end_dim=1)
-            mask_spatial = mask.view(bsz, self.seq_h, self.seq_w).repeat_interleave(patch_size, dim=1).repeat_interleave(patch_size, dim=2)
+            mask_spatial = mask.view(bsz, self.seq_h, self.seq_w).repeat_interleave(self.patch_size, dim=1).repeat_interleave(self.patch_size, dim=2)
             mask = mask_spatial.reshape(bsz, -1)
             ddpmloss_masked = (ddpmloss * mask).sum() / (mask.sum() + 1e-8)
             celoss_masked = (celoss * mask).sum() / (mask.sum() + 1e-8)
