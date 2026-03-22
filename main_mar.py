@@ -344,11 +344,11 @@ def main(args):
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu], find_unused_parameters=False)
         model_without_ddp = model.module
 
-    # print("Compiling model... (This will pause for a few minutes on Step 0)")
+    # print("Compiling model...")
     # config.coordinate_descent_tuning = False
     # config.pattern_matcher = False 
     # config.fx_graph_cache = False
-    # model = torch.compile(model, backend="aot_eager")
+    # model = torch.compile(model, dynamic=True)
 
     # no weight decay on bias, norm layers, and ddpmloss MLP
     param_groups = misc.add_weight_decay(model_without_ddp, args.weight_decay)
