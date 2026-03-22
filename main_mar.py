@@ -25,6 +25,7 @@ import copy
 from ldm.models.autoencoder import VQModel
 from omegaconf import OmegaConf
 
+import torch._inductor.config as config
 
 def get_args_parser():
     parser = argparse.ArgumentParser('MAR training with Diffusion Loss', add_help=False)
@@ -343,8 +344,11 @@ def main(args):
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu], find_unused_parameters=False)
         model_without_ddp = model.module
 
-    print("Compiling model... (This will pause for a few minutes on Step 0)")
-    model = torch.compile(model)
+    # print("Compiling model... (This will pause for a few minutes on Step 0)")
+    # config.coordinate_descent_tuning = False
+    # config.pattern_matcher = False 
+    # config.fx_graph_cache = False
+    # model = torch.compile(model, backend="aot_eager")
 
     # no weight decay on bias, norm layers, and ddpmloss MLP
     param_groups = misc.add_weight_decay(model_without_ddp, args.weight_decay)
