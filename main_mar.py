@@ -349,24 +349,21 @@ def main(args):
     loss_scaler = NativeScaler(enabled=False)
 
     # resume training
-    # if args.resume and os.path.exists(os.path.join(args.resume, "checkpoint-last.pth")):
     if args.resume and os.path.exists(args.resume):
-        # ckpt_path = os.path.join(args.resume, "checkpoint-last.pth")
         ckpt_path = args.resume
         checkpoint = torch.load(ckpt_path, map_location='cpu', weights_only=False)
-        # model_without_ddp.load_state_dict(checkpoint['model'], strict=True)
+        
         msg = model_without_ddp.load_state_dict(checkpoint['model'], strict=False)
         print("Loading pre-trained model")
-        print("Missing keys:")
-        print(msg.missing_keys)
-        print("Unexpected keys:")
-        print(msg.unexpected_keys)
+        print("Missing keys:", msg.missing_keys)
+        print("Unexpected keys:", msg.unexpected_keys)
         print(f"Restored from {ckpt_path}")
 
         model_params = list(model_without_ddp.parameters())
         ema_state_dict = checkpoint['model_ema']
-        # ema_params = [ema_state_dict[name].cuda() for name, _ in model_without_ddp.named_parameters()]
-        ema_params = [(ema_state_dict[name] if name in ema_state_dict else p.detach()).cuda() for name, p in model_without_ddp.named_parameters()]
+        
+        # Load EMA params
+        ema_params = [(ema_state_dict[name] if name in ema_state_dict else p.detach().clone()).cuda() for name, p in model_without_ddp.named_parameters()]
         print("Resume checkpoint %s" % args.resume)
 
         if 'optimizer' in checkpoint and 'epoch' in checkpoint:
@@ -375,85 +372,22 @@ def main(args):
                 print(">> Optimizer state loaded successfully.")
             except ValueError as e:
                 print(f">> WARNING: Optimizer load failed. Skipping optimizer state load. Starting with fresh optimizer.")
-                # We catch the error and do nothing, allowing the script to continue
                 pass
 
             args.start_epoch = checkpoint['epoch'] + 1
             if 'scaler' in checkpoint:
                 loss_scaler.load_state_dict(checkpoint['scaler'])
             print("With optim & sched!")
+            
         del checkpoint
+        torch.cuda.empty_cache() # Flush the massive checkpoint from CPU/GPU memory bridging
+        
     else:
-        model_params = list(model_without_ddp.parameters())
-        ema_params = copy.deepcopy(model_params)
         print("Training from scratch")
-
-    # # resume training
-    # if args.resume and os.path.exists(os.path.join(args.resume, "checkpoint-last.pth")):
-    #     ckpt_path = os.path.join(args.resume, "checkpoint-last.pth")
-    #     checkpoint = torch.load(ckpt_path, map_location='cpu', weights_only=False)
-        
-    #     encoder_keys = [
-    #         'class_emb', 'fake_latent', 'z_proj', 'z_proj_ln', 
-    #         'encoder_pos_embed_learned', 'encoder_blocks', 'encoder_norm'
-    #     ]
-    #     all_weights = checkpoint['model']
-        
-    #     # 1. Filter and Load Weights
-    #     filtered_weights = {k: v for k, v in all_weights.items() if any(k.startswith(p) for p in encoder_keys)}
-    #     msg = model_without_ddp.load_state_dict(filtered_weights, strict=False)
-        
-    #     # 2. DETACH & FREEZE + Set to Eval Mode
-    #     print(f"#### Partial Loading & Detach Report ####")
-    #     for name, param in model_without_ddp.named_parameters():
-    #         if any(name.startswith(p) for p in encoder_keys):
-    #             param.requires_grad = False
-        
-    #     # Force Encoder modules into eval mode to fix LayerNorm statistics
-    #     for name, module in model_without_ddp.named_modules():
-    #         if any(name.startswith(p) for p in encoder_keys):
-    #             module.eval()
-        
-    #     print(f">> Encoder frozen and set to .eval() mode.")
-
-    #     # 3. Handle EMA (Properly updating the EMA object)
-    #     if 'model_ema' in checkpoint and model_ema is not None:
-    #         ema_state_dict = checkpoint['model_ema']
-    #         # Filter EMA to only include encoder
-    #         filtered_ema = {k: v for k, v in ema_state_dict.items() if any(k.startswith(p) for p in encoder_keys)}
-    #         # Load into your EMA object (strict=False because decoder EMA is fresh)
-    #         model_ema.ema_model.load_state_dict(filtered_ema, strict=False)
-    #         print(">> Encoder EMA state restored.")
-
-    #     # 5. Handle Training Metadata
-    #     if 'epoch' in checkpoint:
-    #         # We keep the epoch count so your logs show the total "age" of the model
-    #         args.start_epoch = checkpoint['epoch'] + 1
-    #         print(f">> Resuming at Epoch {args.start_epoch}")
-
-    #     # --- COMMENTED OUT FOR TASK SHIFT ---
-    #     # We do NOT load the optimizer or scaler because:
-    #     # 1. The architecture changed (Encoder is now frozen/detached).
-    #     # 2. The task changed (MAE pixel reconstruction -> MAR Diffusion).
-    #     # 3. Old momentum buffers will conflict with the new decoder's gradients.
-        
-    #     # if 'optimizer' in checkpoint:
-    #     #     try:
-    #     #         optimizer.load_state_dict(checkpoint['optimizer'])
-    #     #         print(">> Optimizer state loaded successfully.")
-    #     #     except ValueError:
-    #     #         print(">> Optimizer mismatch (expected for task shift). Starting fresh.")
-        
-    #     # if 'scaler' in checkpoint:
-    #     #     loss_scaler.load_state_dict(checkpoint['scaler'])
-
-    #     print(">> Encoder loaded & frozen. Starting with a FRESH optimizer for the Diffusion task.")
-    #     del checkpoint
-    # else:
-    #     model_params = list(model_without_ddp.parameters())
-    #     ema_params = copy.deepcopy(model_params)
-    #     print("Training from scratch")
-
+        model_params = list(model_without_ddp.parameters())
+        # The Bulletproof Initialization: Clone and strip gradients
+        ema_params = [p.detach().clone() for p in model_params]
+    
     # evaluate FID and IS
     if args.evaluate:
         torch.cuda.empty_cache()
