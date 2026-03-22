@@ -140,11 +140,10 @@ def train_one_epoch(model, vae,
             print("Loss is {}, stopping training".format(metrics["loss"]))
             sys.exit(1)
 
-        loss_value_reduce = misc.all_reduce_mean(metrics["loss"])
-        ddpmloss_value_reduce = misc.all_reduce_mean(metrics["ddpm"])
-        celoss_value_reduce = misc.all_reduce_mean(metrics["ce"])
-
         if log_writer is not None:
+            loss_value_reduce = misc.all_reduce_mean(metrics["loss"])
+            ddpmloss_value_reduce = misc.all_reduce_mean(metrics["ddpm"])
+            celoss_value_reduce = misc.all_reduce_mean(metrics["ce"])
             """ We use epoch_1000x as the x-axis in tensorboard.
             This calibrates different curves when batch size changes.
             """
