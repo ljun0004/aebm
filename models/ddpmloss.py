@@ -11,6 +11,8 @@ from torch.nn import functional as F
 # import pytorch_lightning as L
 from itertools import chain
 
+from torch._dynamo import disable
+
 class DDPMLoss(nn.Module):
     """Diffusion Loss"""
     def __init__(self, target_channels, z_channels, num_sampling_steps, grad_checkpointing=False):
@@ -89,6 +91,7 @@ class ScoreModel(nn.Module):
         super().__init__()
         self.in_channels = target_channels
 
+    @disable
     def forward(self, x_t, t, sigma_t, mar, x, mask, mask_to_pred, class_embedding, cookbook, gt_indices, warmup, cfg_scale):
         """
         x_t : [B, L, D]
