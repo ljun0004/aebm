@@ -285,6 +285,8 @@ def main(args):
     for param in vae.parameters():
         param.requires_grad = False
 
+    torch.set_float32_matmul_precision('high')
+    
     model = mar.__dict__[args.model](
         img_size=args.img_size,
         vae_stride=args.vae_stride,
@@ -340,6 +342,9 @@ def main(args):
     if args.distributed:
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu], find_unused_parameters=False)
         model_without_ddp = model.module
+
+    print("Compiling model... (This will pause for a few minutes on Step 0)")
+    model = torch.compile(model)
 
     # no weight decay on bias, norm layers, and ddpmloss MLP
     param_groups = misc.add_weight_decay(model_without_ddp, args.weight_decay)
