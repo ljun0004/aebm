@@ -20,6 +20,18 @@ import contextlib
 
 from collections import defaultdict
 
+# def update_ema(target_params, source_params, rate=0.99):
+#     """
+#     Update target parameters to be closer to those of source parameters using
+#     an exponential moving average.
+
+#     :param target_params: the target parameter sequence.
+#     :param source_params: the source parameter sequence.
+#     :param rate: the EMA rate (closer to 1 means slower).
+#     """
+#     for targ, src in zip(target_params, source_params):
+#         targ.detach().mul_(rate).add_(src, alpha=1 - rate)
+
 @torch.no_grad()
 def update_ema(target_params, source_params, rate=0.99):
     """
@@ -41,18 +53,6 @@ def update_ema(target_params, source_params, rate=0.99):
     for dtype in target_by_dtype:
         torch._foreach_mul_(target_by_dtype[dtype], rate)
         torch._foreach_add_(target_by_dtype[dtype], source_by_dtype[dtype], alpha=1.0 - rate)
-
-# def update_ema(target_params, source_params, rate=0.99):
-#     """
-#     Update target parameters to be closer to those of source parameters using
-#     an exponential moving average.
-
-#     :param target_params: the target parameter sequence.
-#     :param source_params: the source parameter sequence.
-#     :param rate: the EMA rate (closer to 1 means slower).
-#     """
-#     for targ, src in zip(target_params, source_params):
-#         targ.detach().mul_(rate).add_(src, alpha=1 - rate)
 
 
 def train_one_epoch(model, vae,
