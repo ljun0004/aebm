@@ -265,16 +265,21 @@ class MAR(nn.Module):
     #     imgs = x.reshape(shape=(x.shape[0], c, h * p, h * p))
     #     return imgs
 
-    def sample_orders(self, bsz):
-        # generate a batch of random generation orders
-        orders = []
-        for _ in range(bsz):
-            order = np.array(list(range(self.seq_len)))
-            np.random.shuffle(order)
-            orders.append(order)
-        orders = torch.Tensor(np.array(orders)).cuda().long()
-        return orders
+    # def sample_orders(self, bsz):
+    #     # generate a batch of random generation orders
+    #     orders = []
+    #     for _ in range(bsz):
+    #         order = np.array(list(range(self.seq_len)))
+    #         np.random.shuffle(order)
+    #         orders.append(order)
+    #     orders = torch.Tensor(np.array(orders)).cuda().long()
+    #     return orders
 
+    def sample_orders(self, bsz, device="cuda"):
+        # Generates random permutations natively on the GPU
+        # torch.rand creates random noise, argsort gives the random indices
+        return torch.rand(bsz, self.seq_len, device=device).argsort(dim=-1)
+    
     def random_masking(self, x, orders):
         # generate token mask
         bsz = x.shape[0]
@@ -364,7 +369,7 @@ class MAR(nn.Module):
 
         x = imgs  # [B, C, H, W]
         bsz, c, h, w = x.shape
-        orders = self.sample_orders(bsz=imgs.shape[0])
+        orders = self.sample_orders(bsz=imgs.shape[0], device=x.device)
         mask = self.random_masking(x, orders)
 
         # class embed
