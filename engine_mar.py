@@ -17,7 +17,6 @@ import copy
 import time
 import hashlib
 import contextlib
-
 from collections import defaultdict
 
 def update_ema(target_params, source_params, rate=0.99):
@@ -53,7 +52,6 @@ def update_ema(target_params, source_params, rate=0.99):
 #     for dtype in target_by_dtype:
 #         torch._foreach_mul_(target_by_dtype[dtype], rate)
 #         torch._foreach_add_(target_by_dtype[dtype], source_by_dtype[dtype], alpha=1.0 - rate)
-
 
 def train_one_epoch(model, vae,
                     model_params, ema_params,
