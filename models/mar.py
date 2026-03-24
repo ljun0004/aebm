@@ -389,9 +389,9 @@ class MAR(nn.Module):
             #     mask = mask.flatten(start_dim=0, end_dim=1)
             mask_spatial = mask.view(bsz, self.seq_h, self.seq_w).repeat_interleave(self.patch_size, dim=1).repeat_interleave(self.patch_size, dim=2)
             mask = mask_spatial.reshape(bsz, -1)
-            ddpmloss_masked = (ddpmloss * mask).sum() / (mask.sum() + 1e-8)
-            celoss_masked = (celoss * mask).sum() / (mask.sum() + 1e-8)
-            reloss_masked = (reloss * mask).sum() / (mask.sum() + 1e-8)
+            ddpmloss_masked = (ddpmloss * mask).sum() / mask.sum()
+            celoss_masked = (celoss * mask).sum() / mask.sum()
+            reloss_masked = (reloss * mask).sum() / mask.sum()
 
         logitsnorm_mean = logitsnorm.mean()
         qnorm_mean = qnorm.mean()
