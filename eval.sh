@@ -4,7 +4,7 @@
 ## -----------------------------
 ## Path Definitions
 ## -----------------------------
-PROJECT_ROOT="/home/junn/Junn/aebm"
+PROJECT_ROOT="/root/autodl-tmp"
 IMAGENET_PATH="${PROJECT_ROOT}/datasets/imagenet/train"
 CACHED_PATH="${PROJECT_ROOT}/datasets/imagenet/cached/vq-f8-n256"
 VAE_PATH="${PROJECT_ROOT}/pretrained_models/vq-f8-n256/model.ckpt"
@@ -64,7 +64,7 @@ echo "========================================"
 ## Execution
 ## -----------------------------
 cd "${PROJECT_ROOT}/aebm"
-echo "Starting training..."
+echo "Starting evaluation..."
 torchrun \
     --nproc_per_node=${NPROC_PER_NODE} \
     main_mar.py \
