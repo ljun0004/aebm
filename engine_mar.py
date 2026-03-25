@@ -375,13 +375,15 @@ def unconditional_generate(model_without_ddp, vae, ema_params, args, epoch, batc
 
     model_without_ddp.eval()
     num_steps = args.gen_num_images // (batch_size * misc.get_world_size())
-    save_folder = os.path.join(args.output_dir, "ariter{}-diffsteps{}-temp{}-{}cfg{}-image{}-{}".format(args.num_iter,
-                                                                                                     args.num_sampling_steps,
-                                                                                                     args.temperature,
-                                                                                                     args.cfg_schedule,
-                                                                                                     cfg,
-                                                                                                     args.gen_num_images,
-                                                                                                     args.sampling_mode))
+    save_folder = os.path.join(args.output_dir, "ariter{}-diffsteps{}-temp{}-{}cfg{}-image{}-epoch{}-{}".format(args.num_iter,
+                                                                                                                args.num_sampling_steps,
+                                                                                                                args.temperature,
+                                                                                                                args.cfg_schedule,
+                                                                                                                cfg,
+                                                                                                                args.gen_num_images,
+                                                                                                                epoch,
+                                                                                                                args.sampling_mode))
+    
     if use_ema:
         save_folder = save_folder + "_ema"
     if args.generate or args.online_gen:
