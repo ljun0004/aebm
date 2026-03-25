@@ -107,7 +107,8 @@ torchrun \
     --generate \
     --gen_freq 1 \
     --gen_bsz 1 \
-    --gen_num_images 1 \
+    --gen_num_images ${NPROC_PER_NODE} \
+    --eval_freq 10 \
     --eval_bsz 64 \
     --eval_num_images 5000 \
     --sampling_mode diffusion \
