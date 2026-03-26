@@ -333,7 +333,8 @@ def main(args):
     eff_batch_size = args.batch_size * misc.get_world_size() * args.accum_iter
 
     if args.lr is None:
-        args.lr = args.blr * (eff_batch_size / 256) ** 0.5
+        args.lr = args.blr * (eff_batch_size / 256) 
+        # ** 0.5
 
     print("base lr: %.2e" % args.blr)
     print("actual lr: %.2e" % args.lr)
