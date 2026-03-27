@@ -13,7 +13,7 @@ CACHED_PATH="${PROJECT_ROOT}/datasets/imagenet/cached/vq-f8-n256"
 VAE_PATH="${PROJECT_ROOT}/pretrained_models/vq-f8-n256"
 
 mkdir -p $IMAGENET_PATH $CACHED_PATH $VAE_PATH
-tar -xvf archive.tar.gz -C $CACHED_PATH
+tar -xf archive.tar.gz -C $CACHED_PATH
 unzip archive.zip -d $VAE_PATH
 
 # Clone repo
