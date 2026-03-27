@@ -70,10 +70,10 @@ class MAR(nn.Module):
         # --------------------------------------------------------------------------
         # Class Embedding
         self.num_classes = class_num
-        self.class_emb = nn.Embedding(class_num, encoder_embed_dim, _freeze=True)
+        self.class_emb = nn.Embedding(class_num, encoder_embed_dim, _freeze=False)
         self.label_drop_prob = label_drop_prob
         # Fake class embedding for CFG's unconditional generation
-        self.fake_latent = nn.Parameter(torch.zeros(1, encoder_embed_dim), requires_grad=False)
+        self.fake_latent = nn.Parameter(torch.zeros(1, encoder_embed_dim), requires_grad=True)
 
         # --------------------------------------------------------------------------
         # MAR variant masking ratio, a left-half truncated Gaussian centered at 100% masking ratio with std 0.25
