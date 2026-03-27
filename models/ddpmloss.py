@@ -91,7 +91,7 @@ class ScoreModel(nn.Module):
         super().__init__()
         self.in_channels = target_channels
 
-    @disable
+    # @disable
     def forward(self, x_t, t, sigma_t, mar, x, mask, mask_to_pred, class_embedding, cookbook, gt_indices, warmup, cfg_scale):
         """
         x_t : [B, L, D]
@@ -105,14 +105,15 @@ class ScoreModel(nn.Module):
             # print(f"ScoreModel forward - x: {x.shape}, x_t: {x_t.shape}, t: {t.shape}, class_embedding: {class_embedding.shape}")
 
             bsz, c, h, w = x.shape
-            k = cookbook.shape[0]
             mask = mask.to(x.dtype).detach()
             # mask_spatial = mask.view(bsz, mar.token_h, mar.token_w)
             # mask_spatial = mask.view(bsz, mar.seq_h, mar.seq_w).repeat_interleave(mar.patch_size, dim=1).repeat_interleave(mar.patch_size, dim=2)
-            x_t = x_t.requires_grad_(True)
+            x_t = x_t.detach().requires_grad_(True)
 
-            z = mar.z_proj(x.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
-            z_t = mar.z_proj(x_t.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
+            # z = mar.z_proj(x.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
+            # z_t = mar.z_proj(x_t.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
+            z = mar.z_proj(x)
+            z_t = mar.z_proj(x_t)
             z_tokens = self.patchify(z, mar)
             zt_tokens = self.patchify(z_t, mar)
             z_masked = ((1.0 - mask.unsqueeze(dim=-1)) * z_tokens) + (mask.unsqueeze(dim=-1) * zt_tokens)
@@ -123,7 +124,9 @@ class ScoreModel(nn.Module):
             # z_masked = mar.z_proj(x_masked)
 
             z_start = z.detach()
-            z_c = mar.z_proj(cookbook).detach()
+            # z_c = mar.z_proj(cookbook).detach()
+            k = cookbook.shape[0]
+            z_c = mar.z_proj(cookbook.view(k, -1, 1, 1)).view(k, -1).detach()
 
             # time embedding
             # t = t.reshape(bsz, seq_len)
