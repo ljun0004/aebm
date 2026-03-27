@@ -9,8 +9,8 @@ IMAGENET_PATH="${PROJECT_ROOT}/datasets/imagenet/train"
 CACHED_PATH="${PROJECT_ROOT}/datasets/imagenet/cached/vq-f8-n256"
 VAE_PATH="${PROJECT_ROOT}/pretrained_models/vq-f8-n256/model.ckpt"
 VAE_CFG="${PROJECT_ROOT}/aebm/first_stage_models/vq-f8-n256/config.yaml"
-LOAD_PATH="${PROJECT_ROOT}/ckpts/vq-f8-n256/mar_base/masked_alpha1.0_beta1.0_ddpm1.0_ce1.0_re0.0_mask16x16_seqlen16x16_zprojtied_wresmlp_L2norm_blr2e-4_sqrt_wu50_wd0.05_gc3_bsz1024/checkpoint-last.pth"
-SAVE_PATH="${PROJECT_ROOT}/ckpts/vq-f8-n256/mar_base/masked_alpha1.0_beta1.0_ddpm1.0_ce1.0_re0.0_mask16x16_seqlen16x16_zprojtied_wresmlp_L2norm_blr2e-4_sqrt_wu50_wd0.05_gc3_bsz1024"
+LOAD_PATH="${PROJECT_ROOT}/ckpts/vq-f8-n256/mar_base/masked_alpha1.0_beta1.0_ddpm1.0_ce1.0_re0.0_mask16x16_seqlen16x16_learnemb_zprojtied_wresmlp_L2norm_blr1e-4_linear_wu0_wd0.02_gc3_bsz1024/checkpoint-last.pth"
+SAVE_PATH="${PROJECT_ROOT}/ckpts/vq-f8-n256/mar_base/masked_alpha1.0_beta1.0_ddpm1.0_ce1.0_re0.0_mask16x16_seqlen16x16_learnemb_zprojtied_wresmlp_L2norm_blr1e-4_linear_wu0_wd0.02_gc3_bsz1024"
 LOG_PATH="${PROJECT_ROOT}/logs"
 
 ## -----------------------------
@@ -35,7 +35,7 @@ echo "========================================"
 # conda activate aebm || conda activate "${CONDA_ENVS_PATH}/aebm"
 # conda info --envs
 # pip install tensorboard tqdm scipy einops timm torch-fidelity opencv-python pytorch-lightning omegaconf
-# export OMP_NUM_THREADS=1
+export OMP_NUM_THREADS=1
 
 echo "===== Environment Check ====="
 which python
@@ -79,8 +79,8 @@ torchrun \
     --batch_size 64 \
     --accum_iter 2 \
     --num_workers 16 \
-    --epochs 100 \
-    --warmup_epochs 50 \
+    --epochs 200 \
+    --warmup_epochs 0 \
     --blr 1.0e-4 \
     --weight_decay 0.02 \
     --grad_clip 3.0 \
@@ -105,7 +105,7 @@ torchrun \
     --final_layer_adaln_mod \
     --use_cached \
     --online_gen \
-    --gen_freq 1 \
+    --gen_freq 10 \
     --gen_bsz 1 \
     --gen_num_images ${NPROC_PER_NODE} \
     --eval_freq 10 \
