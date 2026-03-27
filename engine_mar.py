@@ -118,7 +118,6 @@ def train_one_epoch(model, vae,
 
         # forward
         with sync_context():
-            # with torch.cuda.amp.autocast(enabled=True, dtype=torch.bfloat16):
             with torch.amp.autocast('cuda', enabled=True, dtype=torch.bfloat16):
                 loss_ori, ddpmloss, celoss, reloss, logitsnorm, qnorm, pimax, scorenorm, tembnorm, scale = model(x, labels, gt_indices=gt_indices, cookbook=cookbook, warmup=warmup)
 
@@ -245,7 +244,7 @@ def evaluate(model_without_ddp, vae, ema_params, args, epoch, batch_size=16, log
             # generation
             with torch.no_grad():
                 # with torch.cuda.amp.autocast():
-                with torch.cuda.amp.autocast(enabled=True, dtype=torch.bfloat16):
+                with torch.amp.autocast('cuda', enabled=True, dtype=torch.bfloat16):
                     sampled_tokens = model_without_ddp.sample_tokens(eval_bsz=batch_size, cookbook=cookbook, num_iter=args.num_iter, cfg=cfg,
                                                                         cfg_schedule=args.cfg_schedule, labels=labels_gen,
                                                                         temperature=args.temperature)                       
@@ -417,7 +416,7 @@ def unconditional_generate(model_without_ddp, vae, ema_params, args, epoch, batc
         # generation
         with torch.no_grad():
             # print(f"Unconditional_generate: cookbook: {cookbook.shape}, gt_indices: {gt_indices.shape}")
-            with torch.cuda.amp.autocast(enabled=True, dtype=torch.bfloat16):
+            with torch.amp.autocast('cuda', enabled=True, dtype=torch.bfloat16):
                 sampled_tokens = model_without_ddp.sample_tokens(eval_bsz=batch_size, cookbook=cookbook, num_iter=args.num_iter, 
                                                                 cfg=cfg, cfg_schedule=args.cfg_schedule, temperature=args.temperature,
                                                                 imgs=imgs, labels=labels, gt_indices=gt_indices, sampling_mode=args.sampling_mode)
