@@ -95,8 +95,8 @@ class MAR(nn.Module):
         # MAR encoder specifics
         # self.x_embedder = PatchEmbed(img_size // vae_stride, patch_size, vae_embed_dim, encoder_embed_dim, bias=True)
 
-        # self.z_proj = nn.Conv2d(vae_embed_dim, self.z_proj_dim, kernel_size=1, bias=False)
-        self.z_proj = nn.Linear(vae_embed_dim, self.z_proj_dim, bias=False)
+        self.z_proj = nn.Conv2d(vae_embed_dim, self.z_proj_dim, kernel_size=1, bias=False)
+        # self.z_proj = nn.Linear(vae_embed_dim, self.z_proj_dim, bias=False)
         # self.z_proj_ln = nn.Identity()
         # self.z_proj_ln = nn.LayerNorm(self.z_proj_dim, elementwise_affine=False, eps=1e-5)
         # self.encoder_embed = nn.Linear(final_embed_dim, encoder_embed_dim, bias=True)
