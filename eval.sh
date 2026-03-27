@@ -9,7 +9,7 @@ IMAGENET_PATH="${PROJECT_ROOT}/datasets/imagenet/train"
 CACHED_PATH="${PROJECT_ROOT}/datasets/imagenet/cached/vq-f8-n256"
 VAE_PATH="${PROJECT_ROOT}/pretrained_models/vq-f8-n256/model.ckpt"
 VAE_CFG="${PROJECT_ROOT}/aebm/first_stage_models/vq-f8-n256/config.yaml"
-LOAD_PATH="${PROJECT_ROOT}/ckpts/vq-f8-n256/mar_base/masked_alpha1.0_beta1.0_ddpm1.0_ce1.0_re0.0_mask16x16_seqlen16x16_zprojtied_wresmlp_L2norm_blr2e-4_sqrt_wu50_wd0.05_gc3_bsz1024/checkpoint-50.pth"
+LOAD_PATH="${PROJECT_ROOT}/ckpts/vq-f8-n256/mar_base/masked_alpha1.0_beta1.0_ddpm1.0_ce1.0_re0.0_mask16x16_seqlen16x16_zprojtied_wresmlp_L2norm_blr2e-4_sqrt_wu50_wd0.05_gc3_bsz1024/checkpoint-last.pth"
 SAVE_PATH="${PROJECT_ROOT}/ckpts/vq-f8-n256/mar_base/masked_alpha1.0_beta1.0_ddpm1.0_ce1.0_re0.0_mask16x16_seqlen16x16_zprojtied_wresmlp_L2norm_blr2e-4_sqrt_wu50_wd0.05_gc3_bsz1024"
 LOG_PATH="${PROJECT_ROOT}/logs"
 
