@@ -76,7 +76,7 @@ torchrun \
     --vae_stride 8 \
     --patch_size 2 \
     --model mar_base \
-    --batch_size 128 \
+    --batch_size 64 \
     --accum_iter 2 \
     --num_workers 16 \
     --epochs 100 \
@@ -103,7 +103,20 @@ torchrun \
     --encoder_adaln_mod \
     --decoder_adaln_mod \
     --final_layer_adaln_mod \
-    --use_cached
+    --use_cached \
+    --online_gen \
+    --gen_freq 1 \
+    --gen_bsz 1 \
+    --gen_num_images ${NPROC_PER_NODE} \
+    --eval_freq 10 \
+    --eval_bsz 64 \
+    --eval_num_images 5000 \
+    --sampling_mode diffusion \
+    --num_iter 1 \
+    --num_sampling_steps 100 \
+    --cfg 2.9 \
+    --cfg_schedule linear \
+    --temperature 1.0
     # --grad_checkpointing
 
 echo "========================================"
