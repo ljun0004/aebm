@@ -195,8 +195,8 @@ class MAR(nn.Module):
         nn.init.normal_(self.t_embedder.mlp[2].weight, std=0.02)
 
         # Zero-out adaLN modulation layers in EBT blocks:
-        self.blocks = chain(self.encoder_blocks)
-        for block in self.blocks:
+        # self.blocks = chain(self.encoder_blocks)
+        for block in self.encoder_blocks:
             if isinstance(block, EBTBlock):
                 if block.adaln_mod:
                     nn.init.constant_(block.adaLN_modulation[-1].weight, 0.0)
