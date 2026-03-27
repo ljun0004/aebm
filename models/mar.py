@@ -224,8 +224,8 @@ class MAR(nn.Module):
         # nn.init.constant_(self.final_layer.q_proj.weight, 0.0)
         # nn.init.constant_(self.final_layer.q_proj.bias, 0.0)
         # nn.init.constant_(self.final_layer.logit_bias, 0.0)
-        nn.init.normal_(self.final_layer.mlp[0].weight, std=0.02)
-        nn.init.constant_(self.final_layer.mlp[0].bias, 0)
+        nn.init.normal_(self.final_layer.mlp[1].weight, std=0.02)
+        nn.init.constant_(self.final_layer.mlp[1].bias, 0)
         nn.init.constant_(self.final_layer.mlp[-1].weight, 0)
         # nn.init.constant_(self.final_layer.mlp[-1].bias, 0)
 
