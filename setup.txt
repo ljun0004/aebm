@@ -7,6 +7,15 @@ python -m pip install --upgrade pip
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu130
 pip install tensorboard tqdm scipy einops timm torch-fidelity opencv-python pytorch-lightning omegaconf
 
+PROJECT_ROOT="/root/autodl-tmp"
+IMAGENET_PATH="${PROJECT_ROOT}/datasets/imagenet/train"
+CACHED_PATH="${PROJECT_ROOT}/datasets/imagenet/cached/vq-f8-n256"
+VAE_PATH="${PROJECT_ROOT}/pretrained_models/vq-f8-n256"
+
+mkdir -p $IMAGENET_PATH $CACHED_PATH $VAE_PATH
+tar -xvf archive.tar.gz -C $CACHED_PATH
+unzip archive.zip -d $VAE_PATH
+
 # Clone repo
 cd [WORK_DIR]
 git clone https://github.com/ljun0004/aebm.git
