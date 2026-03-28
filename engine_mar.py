@@ -322,6 +322,13 @@ def evaluate(model_without_ddp, vae, ema_params, args, epoch, batch_size=16, log
 def unconditional_generate(model_without_ddp, vae, ema_params, args, epoch, batch_size=16, log_writer=None, cfg=1.0,
              use_ema=True, data_loader=None):
 
+    if args.vae_mode == "kl":
+        cookbook = None
+    elif args.vae_mode == "vq":
+        cookbook = vae.quantize.embedding.weight
+    else:
+        raise NotImplementedError
+    
     if data_loader is not None:
         samples, labels = next(iter(data_loader))
         device = torch.device("cuda")
@@ -338,7 +345,6 @@ def unconditional_generate(model_without_ddp, vae, ema_params, args, epoch, batc
                 posterior = vae.encode(samples)
             # normalize the std of latent to be 1. Change it if you use a different tokenizer
             h = posterior.mode().mul_(0.2325)
-            cookbook = None
             gt_indices = None
 
         elif args.vae_mode == "vq":
@@ -352,7 +358,6 @@ def unconditional_generate(model_without_ddp, vae, ema_params, args, epoch, batc
                 h, _, _, info = vae.encode(samples)
                 _, _, token_indices = info
                 gt_indices = token_indices.clone().long()
-            cookbook = vae.quantize.embedding.weight
 
         else:
             raise NotImplementedError
