@@ -423,7 +423,7 @@ def unconditional_generate(model_without_ddp, vae, ema_params, args, epoch, batc
             with torch.amp.autocast('cuda', enabled=True, dtype=torch.bfloat16):
                 sampled_tokens = model_without_ddp.sample_tokens(eval_bsz=batch_size, cookbook=cookbook, num_iter=args.num_iter, 
                                                                 cfg=cfg, cfg_schedule=args.cfg_schedule, temperature=args.temperature,
-                                                                imgs=imgs, labels=labels, gt_indices=gt_indices, sampling_mode=args.sampling_mode)
+                                                                imgs=imgs, labels=labels, sampling_mode=args.sampling_mode)
                 # sampled_tokens = h
                 # print(f"unconditional_generate: sampled_tokens: {sampled_tokens.shape}")
                                                                 
