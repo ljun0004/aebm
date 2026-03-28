@@ -246,8 +246,7 @@ def evaluate(model_without_ddp, vae, ema_params, args, epoch, batch_size=16, log
                 # with torch.cuda.amp.autocast():
                 with torch.amp.autocast('cuda', enabled=True, dtype=torch.bfloat16):
                     sampled_tokens = model_without_ddp.sample_tokens(eval_bsz=batch_size, cookbook=cookbook, num_iter=args.num_iter, cfg=cfg,
-                                                                        cfg_schedule=args.cfg_schedule, labels=labels_gen,
-                                                                        temperature=args.temperature)                       
+                                                                     cfg_schedule=args.cfg_schedule, labels=labels_gen, temperature=args.temperature)                       
 
                     if args.vae_mode == "kl":
                         sampled_images = vae.decode(sampled_tokens / 0.2325)
