@@ -413,12 +413,11 @@ def main(args):
     # evaluate FID and IS
     if args.generate:
         torch.cuda.empty_cache()
+        unconditional_generate(model_without_ddp, vae, ema_params, args, epoch=args.start_epoch, batch_size=args.gen_bsz, log_writer=log_writer,
+                               cfg=1.0, use_ema=True, data_loader=data_loader_val)
         if not (args.cfg == 1.0 or args.cfg == 0.0):
             unconditional_generate(model_without_ddp, vae, ema_params, args, epoch=args.start_epoch, batch_size=args.gen_bsz, log_writer=log_writer,
                                    cfg=args.cfg, use_ema=True, data_loader=data_loader_val)
-        else:
-            unconditional_generate(model_without_ddp, vae, ema_params, args, epoch=args.start_epoch, batch_size=args.gen_bsz, log_writer=log_writer,
-                                   cfg=1.0, use_ema=True, data_loader=data_loader_val)
         torch.cuda.empty_cache()
         return
 
