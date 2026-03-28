@@ -35,7 +35,6 @@ echo "========================================"
 # conda activate aebm || conda activate "${CONDA_ENVS_PATH}/aebm"
 # conda info --envs
 # pip install tensorboard tqdm scipy einops timm torch-fidelity opencv-python pytorch-lightning omegaconf
-export OMP_NUM_THREADS=1
 
 echo "===== Environment Check ====="
 which python
@@ -58,6 +57,7 @@ export NPROC_PER_NODE=$(nvidia-smi -L | grep -c "GPU")
 echo " Node: $(hostname)" 
 echo " Auto-detected GPUs: ${NPROC_PER_NODE}" 
 nvidia-smi -L 
+export OMP_NUM_THREADS=1
 echo "========================================"
 
 ## -----------------------------
