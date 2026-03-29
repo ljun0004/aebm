@@ -423,16 +423,15 @@ class MAR(nn.Module):
             cur_tokens = tokens.clone()
 
             # class embedding and CFG
+            null_embedding = self.fake_latent.repeat(eval_bsz, 1)
             if labels is not None:
-                # print(f"Sample Tokens - labels: {labels.shape}")
                 class_embedding = self.class_emb(labels)
+                if not cfg == 1.0:
+                    tokens = torch.cat([tokens, tokens], dim=0)
+                    class_embedding = torch.cat([class_embedding, null_embedding], dim=0)
+                    mask = torch.cat([mask, mask], dim=0)
             else:
-                class_embedding = self.fake_latent.repeat(eval_bsz, 1)
-
-            if not cfg == 1.0:
-                tokens = torch.cat([tokens, tokens], dim=0)
-                class_embedding = torch.cat([class_embedding, self.fake_latent.repeat(eval_bsz, 1)], dim=0)
-                mask = torch.cat([mask, mask], dim=0)
+                class_embedding = null_embedding
 
             # print(f"Sample Tokens - tokens: {tokens.shape}, class_embedding: {class_embedding.shape}, mask: {mask.shape}")
 
