@@ -206,7 +206,6 @@ def main(args):
 
     num_tasks = misc.get_world_size()
     global_rank = misc.get_rank()
-
     print(f"Main - num_tasks: {num_tasks}, global_rank: {global_rank}")
 
     if global_rank == 0 and args.log_dir is not None:
