@@ -9,20 +9,20 @@ IMAGENET_PATH="${PROJECT_ROOT}/datasets/imagenet/train"
 CACHED_PATH="${PROJECT_ROOT}/datasets/imagenet/cached/vq-f8-n256"
 VAE_PATH="${PROJECT_ROOT}/pretrained_models/vq-f8-n256/model.ckpt"
 VAE_CFG="${PROJECT_ROOT}/aebm/first_stage_models/vq-f8-n256/config.yaml"
-LOAD_PATH="${PROJECT_ROOT}/ckpts/vq-f8-n256/mar_base/masked_alpha1.0_beta1.0_ddpm1.0_ce1.0_re0.0_mask16x16_seqlen16x16_learnemb_zprojtied_wresmlp_L2norm_blr1e-4_linear_wu0_wd0.02_gc3_bsz1024/checkpoint-last.pth"
-SAVE_PATH="${PROJECT_ROOT}/ckpts/vq-f8-n256/mar_base/masked_alpha1.0_beta1.0_ddpm1.0_ce1.0_re0.0_mask16x16_seqlen16x16_learnemb_zprojtied_wresmlp_L2norm_blr1e-4_linear_wu0_wd0.02_gc3_bsz1024"
+LOAD_PATH="${PROJECT_ROOT}/ckpts/vq-f8-n256/mar_base/masked_alpha1.0_beta1.0_ddpm1.0_ce1.0_re0.0_mask16x16_seqlen16x16_learnemb_zprojtied_wresmlp_L2norm_blr1e-4_linear_wu0_wd0.02_gc3_bsz512/checkpoint-last.pth"
+SAVE_PATH="${PROJECT_ROOT}/ckpts/vq-f8-n256/mar_base/masked_alpha1.0_beta1.0_ddpm1.0_ce1.0_re0.0_mask16x16_seqlen16x16_learnemb_zprojtied_wresmlp_L2norm_blr1e-4_linear_wu0_wd0.02_gc3_bsz512"
 LOG_PATH="${PROJECT_ROOT}/logs"
 
 ## -----------------------------
 ## Automated Logging
 ## -----------------------------
-# mkdir -p "${LOG_PATH}"
-# LOG_FILE="${LOG_PATH}/train_$(date +%Y%m%d_%H%M%S).txt"
-# exec > >(tee -a "${LOG_FILE}") 2>&1
-# echo "========================================"
-# echo " Job Started: $(date)"
-# echo " Log file: ${LOG_FILE}"
-# echo "========================================"
+mkdir -p "${LOG_PATH}"
+LOG_FILE="${LOG_PATH}/train_$(date +%Y%m%d_%H%M%S).txt"
+exec > >(tee -a "${LOG_FILE}") 2>&1
+echo "========================================"
+echo " Job Started: $(date)"
+echo " Log file: ${LOG_FILE}"
+echo "========================================"
 
 ## -----------------------------
 ## Environment Setup
@@ -82,7 +82,7 @@ torchrun \
     --epochs 200 \
     --warmup_epochs 0 \
     --blr 1.0e-4 \
-    --weight_decay 0.02 \
+    --weight_decay 0.01 \
     --grad_clip 3.0 \
     --alpha 1.0 \
     --beta 1.0 \
