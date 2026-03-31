@@ -200,6 +200,7 @@ def main(args):
     seed = args.seed + misc.get_rank()
     torch.manual_seed(seed)
     np.random.seed(seed)
+    print(f"Main - seed: {seed}")
 
     cudnn.benchmark = True
 
