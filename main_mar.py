@@ -413,11 +413,12 @@ def main(args):
     # evaluate FID and IS
     if args.generate:
         torch.cuda.empty_cache()
-        unconditional_generate(model_without_ddp, vae, ema_params, args, epoch=args.start_epoch, batch_size=args.gen_bsz, log_writer=log_writer,
-                               cfg=1.0, use_ema=True, data_loader=None)
         if not (args.cfg == 1.0 or args.cfg == 0.0):
             unconditional_generate(model_without_ddp, vae, ema_params, args, epoch=args.start_epoch, batch_size=args.gen_bsz, log_writer=log_writer,
                                    cfg=args.cfg, use_ema=True, data_loader=data_loader_val)
+        else:
+            unconditional_generate(model_without_ddp, vae, ema_params, args, epoch=args.start_epoch, batch_size=args.gen_bsz, log_writer=log_writer,
+                       cfg=1.0, use_ema=True, data_loader=None)
         torch.cuda.empty_cache()
         return
 
@@ -461,11 +462,12 @@ def main(args):
         # online unconditional generation
         if args.online_gen and (epoch % args.gen_freq == 0 or epoch + 1 == args.epochs):
             torch.cuda.empty_cache()
-            unconditional_generate(model_without_ddp, vae, ema_params, args, epoch, batch_size=args.gen_bsz, log_writer=log_writer,
-                                   cfg=1.0, use_ema=True, data_loader=None)
             if not (args.cfg == 1.0 or args.cfg == 0.0):
                 unconditional_generate(model_without_ddp, vae, ema_params, args, epoch, batch_size=args.gen_bsz, log_writer=log_writer,
                                        cfg=args.cfg, use_ema=True, data_loader=data_loader_val)
+            else:
+                unconditional_generate(model_without_ddp, vae, ema_params, args, epoch, batch_size=args.gen_bsz, log_writer=log_writer,
+                       cfg=1.0, use_ema=True, data_loader=None)
             torch.cuda.empty_cache()
 
         if misc.is_main_process():
