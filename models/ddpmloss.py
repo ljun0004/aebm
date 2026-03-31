@@ -147,20 +147,30 @@ class ScoreModel(nn.Module):
             # final layer
             # word_embedding = mar.word_embedding
             # word_embedding = torch.zeros(mar.cookbook_size, mar.final_layer.model_channels, dtype=x.dtype, device=x.device)
-            logits, q, pi = mar.final_layer(mar, h, t_embedding, class_embedding, z_c)
+            logits, q = mar.final_layer(mar, h, t_embedding, class_embedding, z_c)
 
-            # energy
-            reg_term = mar.alpha * 0.5 * (q ** 2).sum(dim=-1)
-            lse_term = mar.beta * torch.logsumexp(logits, dim=-1)
-            energy = reg_term - lse_term
+            # # energy
+            # reg_term = mar.alpha * 0.5 * (q ** 2).sum(dim=-1)
+            # lse_term = mar.beta * torch.logsumexp(logits, dim=-1)
+            # energy = reg_term - lse_term
 
-            # score
+            # # score
+            # score = torch.autograd.grad(
+            #     outputs = energy, 
+            #     inputs = x_t,
+            #     grad_outputs = torch.ones_like(energy),
+            #     create_graph = True
+            #     )[0]
+
+            pi = torch.softmax(logits, dim=-1)
+            v = torch.einsum('B L K, K D -> B L D', pi, cookbook_embedding)
+            
             score = torch.autograd.grad(
-                outputs=energy, 
-                inputs=x_t,
-                grad_outputs=torch.ones_like(energy),
-                create_graph=True
-                )[0]
+                outputs = q, 
+                inputs = x_t,
+                grad_outputs = mar.alpha * q - mar.beta * v,
+                create_graph = True
+                )[0]            
 
             # score = self.unpatchify(score, mar)
             model_output = score * sigma_t.detach()
