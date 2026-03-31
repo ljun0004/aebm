@@ -2,7 +2,7 @@
 #SBATCH --job-name=bmar
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=32
+#SBATCH --cpus-per-task=48
 #SBATCH --mem=512G
 #SBATCH --time=2-00:00:00
 #SBATCH --output=bmar-%j.out
@@ -10,14 +10,14 @@
 # --- GPU Partition Selection ---
 
 # Option A: H100
-##SBATCH --partition=m3h
-##SBATCH --qos=m3h
-##SBATCH --gres=gpu:H100:4
+#SBATCH --partition=m3h
+#SBATCH --qos=m3h
+#SBATCH --gres=gpu:H100:4
 
 # Option B: L40S
-#SBATCH --partition=gpu
-#SBATCH --qos=rtq
-#SBATCH --gres=gpu:L40S:4
+##SBATCH --partition=gpu
+##SBATCH --qos=rtq
+##SBATCH --gres=gpu:L40S:4
 
 # Option C: A100
 ##SBATCH --partition=gpu
@@ -28,7 +28,7 @@
 ##SBATCH --mail-user=loo.junnyong@monash.edu
 ##SBATCH --mail-type=BEGIN,END,FAIL
 
-set -e
+# set -e
 
 ## -----------------------------
 ## Environment Setup
