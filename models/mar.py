@@ -560,10 +560,7 @@ class FinalLayer(nn.Module):
         else:
             logits = torch.einsum('B L D, K D -> B L K', q_upsampled, word_embedding)
 
-        pi = torch.softmax(logits, dim=-1)
-        # v = torch.einsum('B L K, K D -> B L D', pi, cookbook_embedding)
-
-        return logits, q_upsampled, pi
+        return logits, q_upsampled
 
     def unpatchify(self, x):
         bsz, l, d = x.shape
