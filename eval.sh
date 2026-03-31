@@ -9,8 +9,8 @@ IMAGENET_PATH="${PROJECT_ROOT}/datasets/imagenet/train"
 CACHED_PATH="${PROJECT_ROOT}/datasets/imagenet/cached/vq-f8-n256"
 VAE_PATH="${PROJECT_ROOT}/pretrained_models/vq-f8-n256/model.ckpt"
 VAE_CFG="${PROJECT_ROOT}/aebm/first_stage_models/vq-f8-n256/config.yaml"
-LOAD_PATH="${PROJECT_ROOT}/ckpts/vq-f8-n256/mar_base/masked_alpha1.0_beta1.0_ddpm1.0_ce1.0_re0.0_mask16x16_seqlen16x16_learnemb_zprojtied_wresmlp_L2norm_blr1e-4_linear_wu0_wd0.02_gc3_bsz1024/checkpoint-last.pth"
-SAVE_PATH="${PROJECT_ROOT}/ckpts/vq-f8-n256/mar_base/masked_alpha1.0_beta1.0_ddpm1.0_ce1.0_re0.0_mask16x16_seqlen16x16_learnemb_zprojtied_wresmlp_L2norm_blr1e-4_linear_wu0_wd0.02_gc3_bsz1024"
+LOAD_PATH="${PROJECT_ROOT}/ckpts/vq-f8-n256/mar_base/masked_alpha1.0_beta1.0_ddpm1.0_ce1.0_re0.0_mask16x16_seqlen16x16_learnemb_zprojtied_wresmlp_L2norm_blr1e-4_linear_wu0_wd0.02_gc3_bsz512/checkpoint-last.pth"
+SAVE_PATH="${PROJECT_ROOT}/ckpts/vq-f8-n256/mar_base/masked_alpha1.0_beta1.0_ddpm1.0_ce1.0_re0.0_mask16x16_seqlen16x16_learnemb_zprojtied_wresmlp_L2norm_blr1e-4_linear_wu0_wd0.02_gc3_bsz512"
 LOG_PATH="${PROJECT_ROOT}/logs"
 
 ## -----------------------------
@@ -77,12 +77,12 @@ torchrun \
     --patch_size 2 \
     --model mar_base \
     --batch_size 64 \
-    --accum_iter 2 \
+    --accum_iter 1 \
     --num_workers 16 \
-    --epochs 100 \
-    --warmup_epochs 50 \
+    --epochs 200 \
+    --warmup_epochs 0 \
     --blr 1.0e-4 \
-    --weight_decay 0.05 \
+    --weight_decay 0.01 \
     --grad_clip 3.0 \
     --alpha 1.0 \
     --beta 1.0 \
@@ -90,9 +90,9 @@ torchrun \
     --celoss_scale 1.0 \
     --reloss_scale 0.0 \
     --diffusion_batch_mul 1 \
-    --mask_ratio_min 0.70 \
+    --mask_ratio_min 0.50 \
     --mask_ratio_max 1.00 \
-    --mask_ratio_mu 1.00 \
+    --mask_ratio_mu 0.75 \
     --mask_ratio_std 0.25 \
     --data_path ${IMAGENET_PATH} \
     --cached_path ${CACHED_PATH} \
@@ -105,7 +105,7 @@ torchrun \
     --final_layer_adaln_mod \
     --use_cached \
     --generate \
-    --gen_freq 1 \
+    --gen_freq 10 \
     --gen_bsz 1 \
     --gen_num_images ${NPROC_PER_NODE} \
     --eval_freq 10 \
