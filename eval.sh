@@ -4,7 +4,7 @@
 ## -----------------------------
 ## Path Definitions
 ## -----------------------------
-PROJECT_ROOT="/root/autodl-tmp"
+PROJECT_ROOT="/home/junn/Junn/aebm"
 IMAGENET_PATH="${PROJECT_ROOT}/datasets/imagenet/train"
 CACHED_PATH="${PROJECT_ROOT}/datasets/imagenet/cached/vq-f8-n256"
 VAE_PATH="${PROJECT_ROOT}/pretrained_models/vq-f8-n256/model.ckpt"
@@ -17,7 +17,7 @@ LOG_PATH="${PROJECT_ROOT}/logs"
 ## Automated Logging
 ## -----------------------------
 mkdir -p "${LOG_PATH}"
-LOG_FILE="${LOG_PATH}/train_$(date +%Y%m%d_%H%M%S).txt"
+LOG_FILE="${LOG_PATH}/eval_$(date +%Y%m%d_%H%M%S).txt"
 exec > >(tee -a "${LOG_FILE}") 2>&1
 echo "========================================"
 echo " Job Started: $(date)"
