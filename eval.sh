@@ -16,13 +16,13 @@ LOG_PATH="${PROJECT_ROOT}/logs"
 ## -----------------------------
 ## Automated Logging
 ## -----------------------------
-# mkdir -p "${LOG_PATH}"
-# LOG_FILE="${LOG_PATH}/train_$(date +%Y%m%d_%H%M%S).txt"
-# exec > >(tee -a "${LOG_FILE}") 2>&1
-# echo "========================================"
-# echo " Job Started: $(date)"
-# echo " Log file: ${LOG_FILE}"
-# echo "========================================"
+mkdir -p "${LOG_PATH}"
+LOG_FILE="${LOG_PATH}/train_$(date +%Y%m%d_%H%M%S).txt"
+exec > >(tee -a "${LOG_FILE}") 2>&1
+echo "========================================"
+echo " Job Started: $(date)"
+echo " Log file: ${LOG_FILE}"
+echo "========================================"
 
 ## -----------------------------
 ## Environment Setup
@@ -79,7 +79,7 @@ torchrun \
     --batch_size 64 \
     --accum_iter 1 \
     --num_workers 16 \
-    --epochs 200 \
+    --epochs 300 \
     --warmup_epochs 0 \
     --blr 1.0e-4 \
     --weight_decay 0.01 \
@@ -92,7 +92,7 @@ torchrun \
     --diffusion_batch_mul 1 \
     --mask_ratio_min 0.50 \
     --mask_ratio_max 1.00 \
-    --mask_ratio_mu 0.75 \
+    --mask_ratio_mu 0.875 \
     --mask_ratio_std 0.25 \
     --data_path ${IMAGENET_PATH} \
     --cached_path ${CACHED_PATH} \
@@ -104,7 +104,7 @@ torchrun \
     --decoder_adaln_mod \
     --final_layer_adaln_mod \
     --use_cached \
-    --generate \
+    --evaluate \
     --gen_freq 10 \
     --gen_bsz 1 \
     --gen_num_images ${NPROC_PER_NODE} \
