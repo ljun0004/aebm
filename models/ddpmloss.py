@@ -41,7 +41,7 @@ class DDPMLoss(nn.Module):
 
         return loss_dict["mse"], loss_dict["ce"], loss_dict["re"], loss_dict["logits"], loss_dict["q"], loss_dict["pi"], loss_dict["score"], loss_dict["temb"], loss_dict["scale"]
 
-    def sample(self, mar, x, mask, mask_to_pred, class_embedding, cookbook, temperature=1.0, cfg=1.0, mode="diffusion", imgs=None):
+    def sample(self, mar, x, mask, mask_to_pred, class_embedding, cookbook, temperature=1.0, cfg=1.0, mode="diffusion", imgs=None, gt_indices=None):
 
         # print(f"DDPMLoss.sample - x: {x.shape}, mask: {mask.shape}, class_embedding: {class_embedding.shape}")
 
@@ -52,12 +52,12 @@ class DDPMLoss(nn.Module):
             # noise = torch.randn(((bsz // 2) * seq_len), self.in_channels).cuda()
             noise = torch.randn_like(x[:(bsz // 2)])
             noise = torch.cat([noise, noise], dim=0)
-            model_kwargs = dict(mar=mar, x=x, mask=mask, mask_to_pred=mask_to_pred, class_embedding=class_embedding, cookbook=cookbook, gt_indices=None, warmup=False, cfg_scale=cfg)
+            model_kwargs = dict(mar=mar, x=x, mask=mask, mask_to_pred=mask_to_pred, class_embedding=class_embedding, cookbook=cookbook, gt_indices=gt_indices, warmup=False, cfg_scale=cfg)
             sample_fn = self.score_model.forward_with_cfg
         else:
             # noise = torch.randn((bsz * seq_len), self.in_channels).cuda()
             noise = torch.randn_like(x)
-            model_kwargs = dict(mar=mar, x=x, mask=mask, mask_to_pred=mask_to_pred, class_embedding=class_embedding, cookbook=cookbook, gt_indices=None, warmup=False, cfg_scale=None)
+            model_kwargs = dict(mar=mar, x=x, mask=mask, mask_to_pred=mask_to_pred, class_embedding=class_embedding, cookbook=cookbook, gt_indices=gt_indices, warmup=False, cfg_scale=None)
             sample_fn = self.score_model.forward
 
         if mode == "reconstruction":
@@ -147,7 +147,7 @@ class ScoreModel(nn.Module):
             # final layer
             # word_embedding = mar.word_embedding
             # word_embedding = torch.zeros(mar.cookbook_size, mar.final_layer.model_channels, dtype=x.dtype, device=x.device)
-            logits, q, pi, v = mar.final_layer(mar, h, t_embedding, class_embedding, z_c)
+            logits, q, pi, v = mar.final_layer(mar, h, t_embedding, class_embedding, cookbook_embedding=z_c, gt_indices=gt_indices)
 
             # # energy
             # reg_term = mar.alpha * 0.5 * (q ** 2).sum(dim=-1)
@@ -166,7 +166,7 @@ class ScoreModel(nn.Module):
                 outputs = q, 
                 inputs = x_t,
                 grad_outputs = mar.alpha * q - mar.beta * v,
-                create_graph = True
+                create_graph = mar.training
                 )[0]            
 
             # score = self.unpatchify(score, mar)
