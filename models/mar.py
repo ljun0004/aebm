@@ -468,7 +468,7 @@ class MAR(nn.Module):
             else:
                 raise NotImplementedError
 
-            sampled_token_latent = self.ddpmloss.sample(self, tokens, mask, mask_to_pred, class_embedding, cookbook, temperature, cfg_iter, mode=sampling_mode, imgs=imgs)
+            sampled_token_latent = self.ddpmloss.sample(self, tokens, mask, mask_to_pred, class_embedding, cookbook, temperature, cfg_iter, mode=sampling_mode, imgs=imgs, gt_indices=gt_indices)
             if not cfg == 1.0:
                 sampled_token_latent, _ = sampled_token_latent.chunk(2, dim=0)  # Remove null class samples
                 mask_to_pred, _ = mask_to_pred.chunk(2, dim=0)
@@ -530,7 +530,7 @@ class FinalLayer(nn.Module):
 
         # self.logit_bias = nn.Parameter(torch.zeros(1, 1, cookbook_size))
 
-    def forward(self, mar, x, t_embedding, class_embedding, cookbook_embedding=None):
+    def forward(self, mar, x, t_embedding, class_embedding, cookbook_embedding=None, gt_indices=None):
 
         bsz, l, d = x.shape
 
@@ -563,7 +563,16 @@ class FinalLayer(nn.Module):
 
         pi = torch.softmax(logits, dim=-1)
         # v = torch.einsum('B L K, K D -> B L D', pi, word_embedding)
-        v = pi @ word_embedding
+
+        # print(f"FinalLayer - training: {mar.training}, gt_indices: {gt_indices.shape if gt_indices is not None else None}")
+        
+        if mar.training:
+            v = pi @ word_embedding
+        else:
+            if gt_indices is not None:
+                v = word_embedding[gt_indices]
+            else:
+                v = pi @ word_embedding
 
         return logits, q_upsampled, pi, v
 
