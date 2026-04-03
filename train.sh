@@ -82,7 +82,7 @@ torchrun \
     --epochs 300 \
     --warmup_epochs 0 \
     --blr 1.0e-4 \
-    --weight_decay 0.01 \
+    --weight_decay 0.02 \
     --grad_clip 3.0 \
     --alpha 1.0 \
     --beta 1.0 \
@@ -105,10 +105,10 @@ torchrun \
     --final_layer_adaln_mod \
     --use_cached \
     --online_gen \
-    --gen_freq 10 \
+    --gen_freq 5 \
     --gen_bsz 1 \
     --gen_num_images ${NPROC_PER_NODE} \
-    --eval_freq 10 \
+    --eval_freq 20 \
     --eval_bsz 64 \
     --eval_num_images 5000 \
     --sampling_mode diffusion \
