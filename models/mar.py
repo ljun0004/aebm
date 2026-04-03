@@ -563,8 +563,6 @@ class FinalLayer(nn.Module):
 
         pi = torch.softmax(logits, dim=-1)
         # v = torch.einsum('B L K, K D -> B L D', pi, word_embedding)
-
-        # print(f"FinalLayer - training: {mar.training}, gt_indices: {gt_indices.shape if gt_indices is not None else None}")
         
         v = pi @ word_embedding
         if not mar.training and gt_indices is not None:
