@@ -218,7 +218,7 @@ class MAR(nn.Module):
         nn.init.normal_(self.final_layer.mlp[1].weight, std=0.02)
         nn.init.constant_(self.final_layer.mlp[1].bias, 0)
         nn.init.constant_(self.final_layer.mlp[-1].weight, 0)
-        # nn.init.constant_(self.final_layer.mlp[-1].bias, 0)
+        nn.init.constant_(self.final_layer.mlp[-1].bias, 0)
         nn.init.constant_(self.final_layer.logit_bias, 0)
 
     def patchify(self, x):
@@ -514,7 +514,7 @@ class FinalLayer(nn.Module):
             nn.LayerNorm(out_channels, elementwise_affine=True, eps=1e-5),
             nn.Linear(out_channels, out_channels * mlp_ratio, bias=True),
             nn.SiLU(),
-            nn.Linear(out_channels * mlp_ratio, out_channels, bias=False)
+            nn.Linear(out_channels * mlp_ratio, out_channels, bias=True)
         )
 
         self.logit_bias = nn.Parameter(torch.zeros(1, 1, cookbook_size))
