@@ -27,7 +27,7 @@ class MAR(nn.Module):
                  encoder_embed_dim=1024, encoder_depth=16, encoder_num_heads=16,
                  decoder_embed_dim=1024, decoder_depth=16, decoder_num_heads=16,
                  final_embed_dim=1024,
-                 cookbook_size=16384,
+                 cookbook_size=256,
                  mlp_ratio=4., norm_layer=nn.LayerNorm,
                  vae_embed_dim=256,
                  mask_ratio_min=0.50,
@@ -141,7 +141,7 @@ class MAR(nn.Module):
         # self.word_embedding = None
         # self.word_embedding = nn.Parameter(torch.zeros(self.cookbook_size, self.vae_embed_dim))
 
-        self.final_layer = FinalLayer(encoder_embed_dim, final_embed_dim, self.z_proj_dim, patch_size, adaln_mod=final_layer_adaln_mod, mlp_ratio=mlp_ratio)
+        self.final_layer = FinalLayer(encoder_embed_dim, final_embed_dim, self.z_proj_dim, patch_size, cookbook_size, adaln_mod=final_layer_adaln_mod, mlp_ratio=mlp_ratio)
         self.criterion = LabelSmoothingCrossEntropy(smoothing=0.1) # turn off for cosim
 
         # --------------------------------------------------------------------------
@@ -182,9 +182,9 @@ class MAR(nn.Module):
         self.apply(_basic_init)
 
         # Initialize patch_embed like nn.Linear (instead of nn.Conv2d):
-        w = self.mar.z_proj.weight.data
+        w = self.z_proj.weight.data
         nn.init.xavier_uniform_(w.view([w.shape[0], -1]))
-        nn.init.constant_(self.mar.z_proj.bias, 0)
+        nn.init.constant_(self.z_proj.bias, 0)
 
         # Initialize timestep embedding MLP
         nn.init.normal_(self.t_embedder.mlp[0].weight, std=0.02)
@@ -487,13 +487,14 @@ class FinalLayer(nn.Module):
     """
     The final layer adopted from DiT.
     """
-    def __init__(self, in_channels, model_channels, out_channels, patch_size, adaln_mod=False, min_logit_scale=0.0, max_logit_scale=1.0, mlp_ratio=4):
+    def __init__(self, in_channels, model_channels, out_channels, patch_size, cookbook_size, adaln_mod=False, min_logit_scale=0.0, max_logit_scale=1.0, mlp_ratio=4):
         super().__init__()
 
         self.in_channels = in_channels
         self.model_channels = model_channels
         self.out_channels = out_channels
         self.patch_size = patch_size
+        self.cookbook_size = cookbook_size
 
         self.adaln_mod = adaln_mod
         print(f"FinalLayer - adaln_mod: {self.adaln_mod}")
@@ -516,7 +517,7 @@ class FinalLayer(nn.Module):
             nn.Linear(out_channels * mlp_ratio, out_channels, bias=False)
         )
 
-        self.logit_bias = nn.Parameter(torch.zeros(1, 1, mar.cookbook_size))
+        self.logit_bias = nn.Parameter(torch.zeros(1, 1, cookbook_size))
 
     def forward(self, mar, x, t_embedding, class_embedding, cookbook_embedding=None, gt_indices=None, gamma=0.0):
 
@@ -544,7 +545,7 @@ class FinalLayer(nn.Module):
         # print(f"FinalLayer - q_upsampled: {q_upsampled.shape}, cookbook_embedding: {cookbook_embedding.shape}")
 
         if mar.beta == 0:
-            logits = torch.zeros(bsz, q_upsampled.shape[1], mar.cookbook_size, dtype=x.dtype, device=x.device, requires_grad=False)
+            logits = torch.zeros(bsz, q_upsampled.shape[1], self.cookbook_size, dtype=x.dtype, device=x.device, requires_grad=False)
         else:
             # logits = torch.einsum('B L D, K D -> B L K', q_upsampled, word_embedding)
             logits = q_upsampled @ word_embedding.T
