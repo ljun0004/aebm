@@ -516,7 +516,7 @@ class FinalLayer(nn.Module):
             nn.Linear(out_channels * mlp_ratio, out_channels, bias=False)
         )
 
-        self.logit_bias = nn.Parameter(torch.zeros(1, 1, cookbook_size))
+        self.logit_bias = nn.Parameter(torch.zeros(1, 1, mar.cookbook_size))
 
     def forward(self, mar, x, t_embedding, class_embedding, cookbook_embedding=None, gt_indices=None, gamma=0.0):
 
