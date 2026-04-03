@@ -95,8 +95,8 @@ class MAR(nn.Module):
         # MAR encoder specifics
         # self.x_embedder = PatchEmbed(img_size // vae_stride, patch_size, vae_embed_dim, encoder_embed_dim, bias=True)
 
-        self.z_proj = nn.Conv2d(vae_embed_dim, self.z_proj_dim, kernel_size=1, bias=False)
-        # self.z_proj = nn.Linear(vae_embed_dim, self.z_proj_dim, bias=False)
+        self.z_proj = nn.Conv2d(vae_embed_dim, self.z_proj_dim, kernel_size=1, bias=True)
+        # self.z_proj = nn.Linear(vae_embed_dim, self.z_proj_dim, bias=True)
         # self.z_proj_ln = nn.Identity()
         # self.z_proj_ln = nn.LayerNorm(self.z_proj_dim, elementwise_affine=False, eps=1e-5)
         # self.encoder_embed = nn.Linear(final_embed_dim, encoder_embed_dim, bias=True)
@@ -171,24 +171,20 @@ class MAR(nn.Module):
             if isinstance(module, (nn.Linear, nn.Conv2d)):
                 if hasattr(module, 'weight'):
                     torch.nn.init.xavier_uniform_(module.weight)
-                # elif hasattr(module, 'weight_g'):
-                #     nn.init.normal_(module.weight_g, std=0.02)
-                #     # module.weight_g.requires_grad = False
-                #     nn.init.normal_(module.weight_v, std=0.02)
                 if module.bias is not None:
-                    nn.init.constant_(module.bias, 0.0)
+                    nn.init.constant_(module.bias, 0)
             # Normalization Layers
             elif isinstance(module, (nn.LayerNorm, nn.RMSNorm)):
                 if module.bias is not None:
-                    nn.init.constant_(module.bias, 0.0)
+                    nn.init.constant_(module.bias, 0)
                 if module.weight is not None:
                     nn.init.constant_(module.weight, 1.0)
         self.apply(_basic_init)
 
         # Initialize patch_embed like nn.Linear (instead of nn.Conv2d):
-        # w = self.x_embedder.proj.weight.data
-        # nn.init.xavier_uniform_(w.view([w.shape[0], -1]))
-        # nn.init.constant_(self.x_embedder.proj.bias, 0)
+        w = self.mar.z_proj.weight.data
+        nn.init.xavier_uniform_(w.view([w.shape[0], -1]))
+        nn.init.constant_(self.mar.z_proj.bias, 0)
 
         # Initialize timestep embedding MLP
         nn.init.normal_(self.t_embedder.mlp[0].weight, std=0.02)
@@ -200,14 +196,11 @@ class MAR(nn.Module):
             if isinstance(block, EBTBlock):
                 if block.adaln_mod:
                     nn.init.constant_(block.adaLN_modulation[-1].weight, 0.0)
-                    nn.init.constant_(block.adaLN_modulation[-1].bias, 0.0)
+                    nn.init.constant_(block.adaLN_modulation[-1].bias, 0)
 
         # Initialize parameters
-        # nn.init.normal_(self.z_proj.weight, std=0.02)
-        # nn.init.normal_(self.encoder_embed.weight, std=0.02)
         nn.init.normal_(self.class_emb.weight, std=0.02)
         nn.init.normal_(self.fake_latent, std=0.02)
-        # nn.init.normal_(self.word_embedding, std=.02)
         # nn.init.normal_(self.mask_token, std=.02)
         # nn.init.normal_(self.encoder_pos_embed_learned, std=.02)
         # nn.init.normal_(self.decoder_pos_embed_learned, std=.02)
@@ -219,15 +212,14 @@ class MAR(nn.Module):
         # Zero-out output layers:
         if self.final_layer.adaln_mod:
             nn.init.constant_(self.final_layer.adaLN_modulation[-1].weight, 0.0)
-            nn.init.constant_(self.final_layer.adaLN_modulation[-1].bias, 0.0)
+            nn.init.constant_(self.final_layer.adaLN_modulation[-1].bias, 0)
         nn.init.normal_(self.final_layer.q_proj.weight, std=0.02)
-        # nn.init.constant_(self.final_layer.q_proj.weight, 0.0)
-        # nn.init.constant_(self.final_layer.q_proj.bias, 0.0)
-        # nn.init.constant_(self.final_layer.logit_bias, 0.0)
+        # nn.init.constant_(self.final_layer.q_proj.bias, 0)
         nn.init.normal_(self.final_layer.mlp[1].weight, std=0.02)
         nn.init.constant_(self.final_layer.mlp[1].bias, 0)
         nn.init.constant_(self.final_layer.mlp[-1].weight, 0)
         # nn.init.constant_(self.final_layer.mlp[-1].bias, 0)
+        nn.init.constant_(self.final_layer.logit_bias, 0)
 
     def patchify(self, x):
         bsz, c, h, w = x.shape
@@ -524,11 +516,7 @@ class FinalLayer(nn.Module):
             nn.Linear(out_channels * mlp_ratio, out_channels, bias=False)
         )
 
-        # self.logit_scale = nn.Parameter(torch.tensor(1.0))
-        # self.min_logit_scale = min_logit_scale
-        # self.max_logit_scale = max_logit_scale
-
-        # self.logit_bias = nn.Parameter(torch.zeros(1, 1, cookbook_size))
+        self.logit_bias = nn.Parameter(torch.zeros(1, 1, cookbook_size))
 
     def forward(self, mar, x, t_embedding, class_embedding, cookbook_embedding=None, gt_indices=None, gamma=0.0):
 
@@ -560,6 +548,7 @@ class FinalLayer(nn.Module):
         else:
             # logits = torch.einsum('B L D, K D -> B L K', q_upsampled, word_embedding)
             logits = q_upsampled @ word_embedding.T
+            logits = logits + self.logit_bias
 
         pi = torch.softmax(logits, dim=-1)
         # v = torch.einsum('B L K, K D -> B L D', pi, word_embedding)
