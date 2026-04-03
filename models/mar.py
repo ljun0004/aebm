@@ -530,7 +530,7 @@ class FinalLayer(nn.Module):
 
         # self.logit_bias = nn.Parameter(torch.zeros(1, 1, cookbook_size))
 
-    def forward(self, mar, x, t_embedding, class_embedding, cookbook_embedding=None, gt_indices=None):
+    def forward(self, mar, x, t_embedding, class_embedding, cookbook_embedding=None, gt_indices=None, gamma=0.0):
 
         bsz, l, d = x.shape
 
@@ -566,13 +566,11 @@ class FinalLayer(nn.Module):
 
         # print(f"FinalLayer - training: {mar.training}, gt_indices: {gt_indices.shape if gt_indices is not None else None}")
         
-        if mar.training:
-            v = pi @ word_embedding
-        else:
-            if gt_indices is not None:
-                v = word_embedding[gt_indices]
-            else:
-                v = pi @ word_embedding
+        v = pi @ word_embedding
+        if not mar.training and gt_indices is not None:
+            # hard_indices = torch.argmax(logits, dim=-1)
+            # v = word_embedding[hard_indices]
+            v = (1 - gamma) * v + gamma * word_embedding[gt_indices]
 
         return logits, q_upsampled, pi, v
 
