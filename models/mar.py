@@ -555,7 +555,7 @@ class FinalLayer(nn.Module):
         # v = torch.einsum('B L K, K D -> B L D', pi, word_embedding)
         
         v = pi @ word_embedding
-        if not mar.training and gt_indices is not None:
+        if not mar.training and gt_indices is not None and gamma > 0.0:
             # hard_indices = torch.argmax(logits, dim=-1)
             # v = word_embedding[hard_indices]
             v = (1 - gamma) * v + gamma * word_embedding[gt_indices]
@@ -707,12 +707,15 @@ class EBTBlock(nn.Module):
         #     q = q + gate_mlp * self.drop_path2(self.layer_scale2(self.mlp(modulate(self.norm2(q), shift_mlp, scale_mlp))))
         # else:
 
+        backend = SDPBackend.MATH if self.training else SDPBackend.FLASH_ATTENTION
+        # print(f"EBTBlock - using sdpa backend: {backend}")
+        
         if self.adaln_mod:
             shift_attn, scale_attn, gate_attn, shift_mlp, scale_mlp, gate_mlp = self.adaLN_modulation(y).chunk(self.num_adaLN_params, dim=-1)
             x_norm = self.norm1(x)
             x_mod = modulate(x_norm, shift_attn, scale_attn)
             # with torch.backends.cuda.sdp_kernel(enable_flash=False, enable_mem_efficient=False, enable_math=True):
-            with sdpa_kernel(SDPBackend.MATH):
+            with sdpa_kernel(backend):
                 attn = self.attn(x_mod)
             x = x + gate_attn * attn
             x_norm = self.norm2(x)
@@ -721,7 +724,7 @@ class EBTBlock(nn.Module):
         else:
             x_norm = self.norm1(x)
             # with torch.backends.cuda.sdp_kernel(enable_flash=False, enable_mem_efficient=False, enable_math=True):
-            with sdpa_kernel(SDPBackend.MATH):
+            with sdpa_kernel(backend):
                 attn = self.attn(x_norm)
             x = x + attn
             x_norm = self.norm2(x)
